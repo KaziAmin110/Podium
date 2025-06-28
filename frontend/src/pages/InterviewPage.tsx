@@ -1,19 +1,23 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import QuestionBody, { type ResponseData } from "../components/QuestionBody";
 
-const InterviewPage = () => {
+const InterviewPage = ({
+  questions,
+}: {
+  questions: Record<number, string>;
+}) => {
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [responses, setResponses] = useState<
     Record<number, ResponseData | null>
   >({});
 
-  const questions: Record<number, string> = {
-    1: "What is your greatest strength?",
-    2: "What is your greatest weakness?",
-    3: "Why do you want to work here?",
-    4: "Describe a challenge you've faced at work.",
-    5: "Where do you see yourself in five years?",
-  };
+  // const questions: Record<number, string> = {
+  //   1: "What is your greatest strength?",
+  //   2: "What is your greatest weakness?",
+  //   3: "Why do you want to work here?",
+  //   4: "Describe a challenge you've faced at work.",
+  //   5: "Where do you see yourself in five years?",
+  // };
 
   const highestAnswered = Object.keys(responses)
     .filter((key) => responses[Number(key)] !== null)

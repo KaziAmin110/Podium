@@ -7,6 +7,7 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState<string>(
     window.location.pathname
   );
+  const [questions, setQuestions] = useState<Record<number, string>>({});
 
   useEffect(() => {
     const onLocationChange = () => setCurrentPath(window.location.pathname);
@@ -21,11 +22,10 @@ export default function App() {
   const renderPage = () => {
     switch (currentPath) {
       case "/interview":
-        // InterviewPage now manages its own state, so it needs no props here.
-        return <InterviewPage />;
+        return <InterviewPage questions={questions} />;
       case "/":
       default:
-        return <HomePage />;
+        return <HomePage setQuestions={setQuestions} />;
     }
   };
 

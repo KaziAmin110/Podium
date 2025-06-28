@@ -12,6 +12,7 @@
     "@google/genai": "^1.7.0",
     "@google/generative-ai": "^0.24.1",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "firebase": "^11.9.1",
