@@ -13,7 +13,7 @@ appRoutes.get("/test", (req, res) => {
 
 function cleanJSONResponse(text) {
   return text
-    .replace(/```json|```/g, '') // remove markdown code block markers
+    .replace(/```json|```/g, '')
     .trim();
 }
 
@@ -21,6 +21,7 @@ function cleanJSONResponse(text) {
 async function generateInterviewQuestions(positionTitle, company, experience) {
   const prompt = `
 You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
+If the company listed is small and unknown, ask more general questions. If the company is large, ask company-specific questions and general questions.
 Respond ONLY in this JSON format:
 {
   "0": "First question?",
@@ -55,6 +56,30 @@ appRoutes.post("/generate-questions", async (req, res) => {
     res.json(questions);
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+//Generate reviews
+import { getDatabase, ref, get, child } from "firebase/database";
+
+const db = getDatabase();
+const dbRef = ref(db);
+
+appRoutes.post("/generate-reviews", async (req, res) => {
+  const { userID, videoID } = req.body;
+
+  try {
+    const snapshot = await get(child(dbRef, `reviews/${userID}/${videoID}`));
+
+    if (!snapshot.exists()) {
+      return res.status(404).json({ message: "No reviews found" });
+    }
+
+    const reviews = snapshot.val();
+    res.json(reviews);
+  } catch (error) {
+    res.status(500).json({ message: "Error retrieving reviews", error });
   }
 });
 
