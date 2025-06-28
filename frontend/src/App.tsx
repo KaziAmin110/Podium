@@ -8,7 +8,7 @@ export default function App() {
     window.location.pathname
   );
   const [questions, setQuestions] = useState<Record<number, string>>({});
-
+  console.log("questions:", questions);
   useEffect(() => {
     const onLocationChange = () => setCurrentPath(window.location.pathname);
     window.addEventListener("navigate", onLocationChange);
