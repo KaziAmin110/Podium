@@ -22,6 +22,7 @@ async function generateInterviewQuestions(positionTitle, company, experience, co
   const prompt = `
 You are an interview assistant. Generate "${count}" interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
 If the company listed is small and unknown, ask more general questions. If the company is large, ask company-specific questions and general questions.
+The list size should be the same as the question count, meaning no null values should appear in the json you return.
 Respond ONLY in this JSON format:
 {
   "0": "First question?",
