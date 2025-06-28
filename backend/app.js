@@ -1,8 +1,14 @@
 // 1. Import Express
-const express = require('express');
+import express from 'express';
+import cookieParser from 'cookie-parser';
 
-// 2. Create an Express application
 const app = express();
+
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cookieParser());
+// 2. Create an Express application
 
 // 3. Define the port the server will run on
 // Use a fallback for environments where PORT isn't set
