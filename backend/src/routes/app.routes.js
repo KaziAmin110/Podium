@@ -18,9 +18,9 @@ function cleanJSONResponse(text) {
 }
 
 
-async function generateInterviewQuestions(positionTitle, company, experience) {
+async function generateInterviewQuestions(positionTitle, company, experience, count) {
   const prompt = `
-You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
+You are an interview assistant. Generate "${count}" interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
 If the company listed is small and unknown, ask more general questions. If the company is large, ask company-specific questions and general questions.
 Respond ONLY in this JSON format:
 {
@@ -40,19 +40,18 @@ Respond ONLY in this JSON format:
 }
 
 appRoutes.post("/generate-questions", async (req, res) => {
-  const { positionTitle, company, experience } = req.body;
-  if (!positionTitle || !company || !experience) {
+  const { positionTitle, company, experience, count} = req.body;
+  if (!positionTitle || !company || !experience || !count) {
     return res.status(400).json({ error: "positionTitle, company, and experience are required" });
   }
 
-  const questions = await generateInterviewQuestions(positionTitle, company, experience);
+  const questions = await generateInterviewQuestions(positionTitle, company, experience, count);
   res.json(questions);
 });
 
 
 //Generate reviews
 const upload = multer();
-const model = "gemini-1.5-flash";
 
 import multer from "multer";
 import * as fs from "node:fs";
@@ -82,7 +81,8 @@ appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => 
       text: `
 Review the candidate's answer to this interview question harshly and score it from 1 to 10.
 You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
-Tell them their faults but also tell them how to improve in overall feedback
+Tell them their faults but also tell them how to improve in overall feedback.
+Make sure to take posture and how they look into account but it should not overshadow their actual knowledge.
 
 Provide a JSON output with these keys:
 - score (int)
