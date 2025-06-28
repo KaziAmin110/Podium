@@ -1,11 +1,20 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect } from "react";
 
+// --- Type Definition ---
 export interface ResponseData {
   videoUrl: string;
   videoBlob?: Blob;
 }
 
-// --- NEW: Props interface updated ---
+// --- NEW: Configuration for Video Recording ---
+// Check if the browser supports recording in MP4 format. Fallback to webm if not.
+const supportedMimeType = MediaRecorder.isTypeSupported("video/mp4")
+  ? "video/mp4"
+  : "video/webm";
+// Determine the file extension based on the supported MIME type.
+const fileExtension = supportedMimeType.split("/")[1];
+
+// --- Props Interface ---
 interface QuestionBodyProps {
   currentQuestionIndex: number;
   question: string;
@@ -20,7 +29,7 @@ const QuestionBody = ({
   response,
   onResponseChange,
   onNavigateNext,
-  isLastQuestion
+  isLastQuestion,
 }: QuestionBodyProps) => {
   const [permission, setPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
@@ -41,15 +50,20 @@ const QuestionBody = ({
 
   useEffect(() => {
     if (permission && stream && liveVideoRef.current) {
-        liveVideoRef.current.srcObject = stream;
+      liveVideoRef.current.srcObject = stream;
     }
   }, [permission, stream]);
 
-
   const getCameraPermission = async () => {
-    if ("mediaDevices" in navigator && "getUserMedia" in navigator.mediaDevices) {
+    if (
+      "mediaDevices" in navigator &&
+      "getUserMedia" in navigator.mediaDevices
+    ) {
       try {
-        const videoStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const videoStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true,
+        });
         setPermission(true);
         setStream(videoStream);
       } catch (err) {
@@ -80,7 +94,8 @@ const QuestionBody = ({
     if (!stream) return;
     setIsRecording(true);
     videoChunks.current = [];
-    const media = new MediaRecorder(stream, { mimeType: "video/webm" });
+    // --- MODIFIED: Use the dynamically determined MIME type ---
+    const media = new MediaRecorder(stream, { mimeType: supportedMimeType });
     mediaRecorder.current = media;
     mediaRecorder.current.start();
     mediaRecorder.current.ondataavailable = (e) => {
@@ -91,7 +106,10 @@ const QuestionBody = ({
   const stopRecording = () => {
     if (!mediaRecorder.current) return;
     mediaRecorder.current.onstop = () => {
-      const videoBlob = new Blob(videoChunks.current, { type: "video/webm" });
+      // --- MODIFIED: Create a Blob with the correct MIME type ---
+      const videoBlob = new Blob(videoChunks.current, {
+        type: supportedMimeType,
+      });
       onResponseChange({
         videoUrl: URL.createObjectURL(videoBlob),
         videoBlob: videoBlob,
@@ -103,22 +121,27 @@ const QuestionBody = ({
     mediaRecorder.current.stop();
     setIsRecording(false);
   };
-  
+
   if (response) {
     return (
       <div className="question-body">
         <h2>{question}</h2>
         <div className="video-player">
           <h3>Your Response:</h3>
-          <video src={response.videoUrl} controls playsInline key={response.videoUrl}></video>
+          <video
+            src={response.videoUrl}
+            controls
+            playsInline
+            key={response.videoUrl}
+          ></video>
           <div className="action-buttons">
-            <a href={response.videoUrl} download={`response.webm`}>
+            {/* --- MODIFIED: Use the dynamic file extension for download --- */}
+            <a href={response.videoUrl} download={`response.${fileExtension}`}>
               Download
             </a>
             <button onClick={handleReset} className="delete-btn">
               Delete Response
             </button>
-            {/* --- NEW: Conditional "Next" Button --- */}
             {!isLastQuestion && (
               <button onClick={onNavigateNext} className="next-btn">
                 Next Question &rarr;
@@ -130,20 +153,30 @@ const QuestionBody = ({
     );
   }
 
-  // --- (The rest of the component's return statements are unchanged) ---
+  // --- (The rest of the component is unchanged) ---
   if (permission && stream) {
     return (
       <div className="question-body">
         <h2>{question}</h2>
         <div className="video-player">
-          <video ref={liveVideoRef} autoPlay muted playsInline className="live-preview"></video>
+          <video
+            ref={liveVideoRef}
+            autoPlay
+            muted
+            playsInline
+            className="live-preview"
+          ></video>
         </div>
         <div className="action-buttons">
-            {!isRecording ? (
-            <button onClick={startRecording} className="record-btn">Start Recording</button>
-            ) : (
-            <button onClick={stopRecording} className="recording-btn">Stop Recording</button>
-            )}
+          {!isRecording ? (
+            <button onClick={startRecording} className="record-btn">
+              Start Recording
+            </button>
+          ) : (
+            <button onClick={stopRecording} className="recording-btn">
+              Stop Recording
+            </button>
+          )}
         </div>
       </div>
     );
@@ -156,12 +189,14 @@ const QuestionBody = ({
         <button onClick={getCameraPermission}>Record a Response</button>
         <button onClick={handleUploadClick}>Upload a Video</button>
         <input
-          type="file" ref={fileInputRef} onChange={handleFileChange}
-          accept="video/*" style={{ display: "none" }}
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept="video/*"
+          style={{ display: "none" }}
         />
       </div>
-       {/* --- NEW: Style for the "Next" button --- */}
-       <style>{`
+      <style>{`
           .next-btn {
             background-color: #28a745;
             color: white;
