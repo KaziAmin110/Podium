@@ -8,6 +8,7 @@
     "dev": "nodemon index.js"
   },
   "dependencies": {
+    "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
     "cookie-parser": "^1.4.7",
     "express": "^5.1.0",
     "firebase": "^11.9.1",
