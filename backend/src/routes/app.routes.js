@@ -63,16 +63,13 @@ appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => 
   const question = req.body.question;
   const company = req.body.company;
   const position = req.body.positionTitle;
-  const tempPath = path.resolve("./temp/video.mp4");
   const experience = req.body.experience;
+  const tempPath = path.resolve("./temp/video.mp4");
 
   await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
   await fs.promises.writeFile(tempPath, req.file.buffer);
 
-
-  const base64VideoFile = fs.readFileSync("./temp/video.mp4", {
-    encoding: "base64",
-  });
+  const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
 
   const contents = [
     {
@@ -81,21 +78,39 @@ appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => 
         data: base64VideoFile,
       },
     },
-    { text: `Review this interview based on how well the question is answered. Make sure to be harsh and do not use extra formatting like **. 
-      The company being applied to "${company}"
-      The position they are looking for is "${position}"
-      The position type they are applying for is "${experience}"
-       "${question}"` }
+    {
+      text: `
+Review the candidate's answer to this interview question harshly and score it from 1 to 10.
+You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
+Tell them their faults but also tell them how to improve in overall feedback
+
+Provide a JSON output with these keys:
+- score (int)
+- strengths (list of strings)
+- weaknesses (list of strings)
+- overall_feedback (string)
+
+Do not add any extra formatting or text outside the JSON.
+
+The company is "${company}".
+The position is "${position}".
+The experience level is "${experience}".
+
+Question: "${question}".
+`
+    }
   ];
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
-    contents: contents,
+    contents,
   });
 
   await fs.promises.unlink(tempPath);
 
-  res.json({ review: response.text });
+  const reviewJson = JSON.parse(cleanJSONResponse(response.text));
+
+  res.json({ review: reviewJson });
 });
 
 
