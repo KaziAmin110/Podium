@@ -40,10 +40,10 @@ Respond ONLY in this JSON format:
 }
 
 appRoutes.post("/generate-questions", async (req, res) => {
-  const { positionTitle, company, experience, count} = req.body;
-  if (!positionTitle || !company || !experience || !count) {
-    return res.status(400).json({ error: "positionTitle, company, and experience are required" });
-  }
+  const positionTitle = req.body.positionTitle || "unknown";
+  const company = req.body.company || "unknown";
+  const experience = req.body.experience || "unknown";
+  const count = req.body.count || 5;
 
   const questions = await generateInterviewQuestions(positionTitle, company, experience, count);
   res.json(questions);
@@ -59,10 +59,10 @@ import path from "path";
 
 
 appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => {
-  const question = req.body.question;
-  const company = req.body.company;
-  const position = req.body.positionTitle;
-  const experience = req.body.experience;
+  const question = req.body.question || "unknown";
+  const company = req.body.company || "unknown";
+  const position = req.body.positionTitle || "unknown";
+  const experience = req.body.experience || "unknown";
   const tempPath = path.resolve("./temp/video.mp4");
 
   await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
