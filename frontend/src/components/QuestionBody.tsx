@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 
-// --- QuestionBody Component with Upload and Record Logic ---
+// --- QuestionBody Component with Upload, Record, and Delete Logic ---
 
 const QuestionBody = ({
   currentQuestionIndex,
@@ -21,23 +21,16 @@ const QuestionBody = ({
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const videoChunks = useRef<Blob[]>([]);
   const liveVideoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null); // Ref for the hidden file input
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // --- NEW: Reset state when question changes ---
+  // Reset state when the question changes
   useEffect(() => {
-    setPermission(false);
-    setStream(null);
-    setRecordingStatus("inactive");
-    setRecordedVideo(null);
-    videoChunks.current = [];
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    handleReset(); // Use the new reset handler to clear everything
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentQuestionIndex]);
 
-  // Function to get camera and microphone permissions
   const getCameraPermission = async () => {
-    // Reset previous recording state if any
+    // ... (This function remains the same)
     setRecordedVideo(null);
     setRecordingStatus("inactive");
     videoChunks.current = [];
@@ -64,34 +57,46 @@ const QuestionBody = ({
     }
   };
 
-  // --- NEW: Handler for the "Upload from File" button ---
   const handleUploadClick = () => {
-    // Programmatically click the hidden file input element
     fileInputRef.current?.click();
   };
 
-  // --- NEW: Handler for when a user selects a file ---
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      // Create a URL for the selected file
       const videoUrl = URL.createObjectURL(file);
-      // Set the video to be displayed and update the status
       setRecordedVideo(videoUrl);
       setRecordingStatus("recorded");
     }
   };
 
-  // Assign the stream to the video element for live preview
+  // --- NEW: Handler to reset the state and delete the video ---
+  const handleReset = () => {
+    // Revoke the object URL to free up memory
+    if (recordedVideo) {
+      URL.revokeObjectURL(recordedVideo);
+    }
+    // Reset all relevant states to their initial values
+    setPermission(false);
+    setStream(null);
+    setRecordingStatus("inactive");
+    setRecordedVideo(null);
+    videoChunks.current = [];
+    // Clear the file input in case a file was selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   useEffect(() => {
     if (liveVideoRef.current && stream) {
       liveVideoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  // Function to start recording the media stream
   const startRecording = () => {
+    // ... (This function remains the same)
     if (stream === null) return;
     setRecordingStatus("recording");
     const media = new MediaRecorder(stream, { mimeType: "video/webm" });
@@ -103,8 +108,8 @@ const QuestionBody = ({
     };
   };
 
-  // Function to stop the recording
   const stopRecording = () => {
+    // ... (This function remains the same)
     if (mediaRecorder.current === null) return;
     setRecordingStatus("recorded");
     mediaRecorder.current.stop();
@@ -126,7 +131,6 @@ const QuestionBody = ({
       <h1>Question {currentQuestionIndex}:</h1>
       <p className="question-text">{question}</p>
 
-      {/* --- Video Recording UI --- */}
       <div className="video-controls">
         {/* Step 1: Show initial choice buttons */}
         {recordingStatus === "inactive" && !permission && (
@@ -135,9 +139,8 @@ const QuestionBody = ({
               Record Response
             </button>
             <button onClick={handleUploadClick} type="button">
-              Upload Response
+              Upload from File
             </button>
-            {/* Hidden file input, controlled by the ref */}
             <input
               type="file"
               ref={fileInputRef}
@@ -177,30 +180,45 @@ const QuestionBody = ({
           </>
         )}
 
-        {/* Step 3: Show Recorded OR Uploaded Video and Download Link */}
+        {/* Step 3: Show recorded video with Download and new Delete button */}
         {recordingStatus === "recorded" && recordedVideo && (
           <div className="video-player">
             <h2>Your Response:</h2>
             <video src={recordedVideo} controls playsInline></video>
-            <button
-              onClick={() => {
-                const link = document.createElement("a");
-                link.href = recordedVideo;
-                link.download = `response-question-${currentQuestionIndex}.webm`;
-                link.click();
-              }}
-            >
-              Download Response
-            </button>
+            <div className="action-buttons">
+              <button
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = recordedVideo;
+                  link.download = `response-question-${currentQuestionIndex}.webm`;
+                  link.click();
+                }}
+              >
+                Download Response
+              </button>
+              {/* --- NEW "DELETE" BUTTON --- */}
+              <button onClick={handleReset} className="delete-btn">
+                Remove Response
+              </button>
+            </div>
           </div>
         )}
       </div>
-      {/* Simple styles to make the buttons appear next to each other */}
+
+      {/* Simple styles for the buttons */}
       <style>{`
-          .initial-choice-buttons {
+          .initial-choice-buttons, .action-buttons {
             display: flex;
             gap: 1rem;
             justify-content: center;
+            margin-top: 1rem;
+          }
+          .delete-btn {
+            background-color: #e74c3c; /* Red color for delete */
+            color: white;
+          }
+          .delete-btn:hover {
+            background-color: #c0392b;
           }
         `}</style>
     </div>
