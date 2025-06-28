@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ReactNode } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export interface ResponseData {
   videoUrl: string;
@@ -9,6 +9,9 @@ export interface ResponseData {
 interface QuestionBodyProps {
   currentQuestionIndex: number;
   question: string;
+  company?: string;
+  positionTitle?: string;
+  experience?: string;
   response: ResponseData | null;
   onResponseChange: (response: ResponseData | null) => void;
   onNavigateNext: () => void;
@@ -17,6 +20,9 @@ interface QuestionBodyProps {
 
 const QuestionBody = ({
   question,
+  company = "Amazon",
+  positionTitle = "Software Engineer",
+  experience = "Senior",
   response,
   onResponseChange,
   onNavigateNext,
@@ -66,6 +72,58 @@ const QuestionBody = ({
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
+
+  const handleSubmitClick = async (
+    question: string,
+    company: string,
+    positionTitle: string,
+    experience: string,
+    videoBlob: Blob
+  ) => {
+    const apiUrl = "http://localhost:3000/api/app/generate-reviews";
+    const requestBody = {
+      positionTitle: positionTitle,
+      company: company,
+      experience: experience,
+      question: { question },
+      video: videoBlob,
+    };
+
+    try {
+      // 1. Send the POST request to your backend API.
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      // 2. Check if the request was successful.
+      if (!response.ok) {
+
+        console.error(
+          `API request failed with status ${response.status}: ${response.statusText}`
+        );
+      }
+
+      // Optional: You can process the response from the server if needed.
+      // const data = await response.json();
+      // console.log("Received data from server:", data);
+
+      // 3. If the request was successful, navigate to the interview page.
+      // This uses the same routing mechanism as your Link component to prevent a page refresh.
+      const data = await response.json();
+      console.log(data);
+      return data;
+    } catch (error) {
+      console.error("Failed to start interview:", error);
+      // Inform the user that something went wrong.
+      alert(
+        "Could not start the interview. Please ensure the local server is running and try again."
+      );
+    }
+  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -122,7 +180,7 @@ const QuestionBody = ({
             key={response.videoUrl}
           ></video>
           <div className="action-buttons">
-            <a href={response.videoUrl} download={`response.webm`}>
+            <a href={response.videoUrl} download={`response.mp4`}>
               Download
             </a>
             <button onClick={handleReset} className="delete-btn">
@@ -132,6 +190,20 @@ const QuestionBody = ({
             {!isLastQuestion && (
               <button onClick={onNavigateNext} className="next-btn">
                 Next Question &rarr;
+              </button>
+            )}
+            {isLastQuestion && (
+              <button
+                onClick={() => {
+                  if (response.videoBlob) {
+                    handleSubmitClick(question, company, positionTitle, experience, response.videoBlob);
+                  } else {
+                    alert("No video response found to submit.");
+                  }
+                }}
+                className="next-btn"
+              >
+                Submit Interview
               </button>
             )}
           </div>

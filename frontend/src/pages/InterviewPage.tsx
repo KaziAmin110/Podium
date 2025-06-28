@@ -46,7 +46,6 @@ const InterviewPage = ({
     if (nextQuestionNumber <= totalQuestions) {
       setCurrentQuestion(nextQuestionNumber);
     }
-    console.log(1);
   };
 
   return (
