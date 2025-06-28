@@ -64,6 +64,7 @@ appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => 
   const company = req.body.company;
   const position = req.body.positionTitle;
   const tempPath = path.resolve("./temp/video.mp4");
+  const experience = req.body.experience;
 
   await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
   await fs.promises.writeFile(tempPath, req.file.buffer);
