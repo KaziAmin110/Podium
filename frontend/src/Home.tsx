@@ -30,12 +30,12 @@ interface SearchInputProps {
 interface BubbleSectionProps {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  items: Company[] | Position[] | Level[];
-  selectedItem: string;
-  onSelect: (item: string) => void;
+  items: Company[] | Position[] | Level[] | QuestionCount[];
+  selectedItem: string | number;
+  onSelect: (item: any) => void; // More flexible typing
   searchValue: string;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  type: 'company' | 'position' | 'level';
+  type: 'company' | 'position' | 'level' | 'questionCount';
   searchId: string;
   showCustom: boolean;
   onCustomToggle: () => void;
@@ -92,6 +92,18 @@ const LEVELS: Level[] = [
   { name: 'New Graduate', icon: '🌟', color: 'bg-blue-600', description: 'Fresh Graduate' }
 ];
 
+interface QuestionCount {
+  name: string;
+  value: number;
+  color: string;
+}
+
+const QUESTION_COUNTS: QuestionCount[] = [
+  { name: '3 Questions', value: 3, color: 'bg-blue-500' },
+  { name: '4 Questions', value: 4, color: 'bg-purple-500' },
+  { name: '5 Questions', value: 5, color: 'bg-green-500' },
+];
+
 const SearchInput: React.FC<SearchInputProps> = ({ placeholder, value, onChange, searchId }) => (
   <div className="relative">
     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -129,12 +141,14 @@ const BubbleSection: React.FC<BubbleSectionProps> = ({
         <Icon className="mr-3 w-7 h-7 text-purple-400" />
         {title}
       </h2>
-      <SearchInput
-        placeholder={`Search ${title.toLowerCase()}...`}
-        value={searchValue}
-        onChange={onSearchChange}
-        searchId={searchId}
-      />
+      {type !== 'questionCount' && (
+        <SearchInput
+          placeholder={`Search ${title.toLowerCase()}...`}
+          value={searchValue}
+          onChange={onSearchChange}
+          searchId={searchId}
+        />
+      )}
     </div>
 
     {/* Custom input box below header */}
@@ -173,45 +187,58 @@ const BubbleSection: React.FC<BubbleSectionProps> = ({
           </div>
         </div>
 
-        {items.map((item) => (
-          <div
-            key={item.name}
-            onClick={() => onSelect(item.name)}
-            className="relative cursor-pointer transition-all duration-300"
-          >
-            <div className={`${item.color} p-3 rounded-xl shadow-lg border-2 transition-all h-20 w-full flex flex-col justify-center ${
-              selectedItem === item.name ? 'border-white' : 'border-transparent'
-            }`}>
-              {type === 'company' && (
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-xs">
-                    {(item as Company).initials}
+        {items.map((item) => {
+          const isQuestionCount = type === 'questionCount';
+          const itemValue = isQuestionCount ? (item as QuestionCount).value : (item as any).name;
+          const isSelected = selectedItem === itemValue;
+          
+          return (
+            <div
+              key={isQuestionCount ? `count-${(item as QuestionCount).value}` : (item as any).name}
+              onClick={() => onSelect(itemValue)}
+              className="relative cursor-pointer transition-all duration-300"
+            >
+              <div className={`${item.color} p-3 rounded-xl shadow-lg border-2 transition-all h-20 w-full flex flex-col justify-center ${
+                isSelected ? 'border-white' : 'border-transparent'
+              }`}>
+                {type === 'company' && (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-xs">
+                      {(item as Company).initials}
+                    </div>
+                    <span className="text-white font-semibold text-xs truncate w-full px-1">{(item as any).name}</span>
                   </div>
-                  <span className="text-white font-semibold text-xs truncate w-full px-1">{item.name}</span>
-                </div>
-              )}
+                )}
 
-              {type === 'position' && (
-                <div className="flex flex-col items-center text-center">
-                  <div className="text-lg mb-1">{(item as Position).icon}</div>
-                  <span className="text-white font-semibold text-xs leading-tight text-center px-1 truncate w-full">{item.name}</span>
-                </div>
-              )}
+                {type === 'position' && (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="text-lg mb-1">{(item as Position).icon}</div>
+                    <span className="text-white font-semibold text-xs leading-tight text-center px-1 truncate w-full">{(item as any).name}</span>
+                  </div>
+                )}
 
-              {type === 'level' && (
-                <div className="flex flex-col items-center text-center">
-                  <div className="text-lg mb-1">{(item as Level).icon}</div>
-                  <span className="text-white font-semibold text-xs mb-0 truncate w-full text-center">{item.name}</span>
-                  <span className="text-white/70 text-xs truncate w-full text-center px-1">{(item as Level).description}</span>
-                </div>
-              )}
+                {type === 'level' && (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="text-lg mb-1">{(item as Level).icon}</div>
+                    <span className="text-white font-semibold text-xs mb-0 truncate w-full text-center">{(item as any).name}</span>
+                    <span className="text-white/70 text-xs truncate w-full text-center px-1">{(item as Level).description}</span>
+                  </div>
+                )}
 
-              {selectedItem === item.name && (
-                <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
-              )}
+                {type === 'questionCount' && (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="text-lg mb-1 text-white font-bold">{(item as QuestionCount).value}</div>
+                    <span className="text-white font-semibold text-xs truncate w-full text-center px-1">{(item as QuestionCount).name}</span>
+                  </div>
+                )}
+
+                {isSelected && (
+                  <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
 
@@ -224,30 +251,36 @@ const BubbleSection: React.FC<BubbleSectionProps> = ({
 );
 
 interface InterviewData {
+  questions: string[]; // Array of question strings from backend
+}
+
+interface InterviewRequestData {
   company: string;
-  position: string;
-  level: string;
-  timestamp: string;
-  questions: string[]; // Array of 5 question strings
+  positionTitle: string;
+  experience: string;
+  count: number;
 }
 
 interface PodiumJobSearchProps {
   onInterviewStart?: (data: InterviewData) => void;
 }
 
-const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
+const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
   const [selectedCompany, setSelectedCompany] = useState<string>('');
   const [selectedPosition, setSelectedPosition] = useState<string>('');
   const [selectedLevel, setSelectedLevel] = useState<string>('');
+  const [selectedQuestionCount, setSelectedQuestionCount] = useState<number>(5); // Default to 5
   const [companySearch, setCompanySearch] = useState<string>('');
   const [positionSearch, setPositionSearch] = useState<string>('');
   const [levelSearch, setLevelSearch] = useState<string>('');
   const [customCompany, setCustomCompany] = useState<string>('');
   const [customPosition, setCustomPosition] = useState<string>('');
   const [customLevel, setCustomLevel] = useState<string>('');
+  const [customQuestionCount, setCustomQuestionCount] = useState<string>('');
   const [showCustomCompany, setShowCustomCompany] = useState<boolean>(false);
   const [showCustomPosition, setShowCustomPosition] = useState<boolean>(false);
   const [showCustomLevel, setShowCustomLevel] = useState<boolean>(false);
+  const [showCustomQuestionCount, setShowCustomQuestionCount] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showResults, setShowResults] = useState<boolean>(false);
   const [searchResults, setSearchResults] = useState<InterviewData | null>(null);
@@ -256,6 +289,7 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
   const customCompanyRef = useRef<HTMLInputElement | null>(null);
   const customPositionRef = useRef<HTMLInputElement | null>(null);
   const customLevelRef = useRef<HTMLInputElement | null>(null);
+  const customQuestionCountRef = useRef<HTMLInputElement | null>(null);
 
   // Filter data based on search
   const filteredCompanies = COMPANIES.filter(company =>
@@ -274,40 +308,75 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
   const finalCompany = showCustomCompany ? customCompany : selectedCompany;
   const finalPosition = showCustomPosition ? customPosition : selectedPosition;
   const finalLevel = showCustomLevel ? customLevel : selectedLevel;
+  const finalQuestionCount = showCustomQuestionCount ? parseInt(customQuestionCount) || 5 : selectedQuestionCount;
 
   const handleSubmit = async (): Promise<void> => {
     setIsSubmitting(true);
     
-    const interviewData = {
+    const interviewData: InterviewRequestData = {
       company: finalCompany,
-      position: finalPosition,
-      level: finalLevel,
-      timestamp: new Date().toISOString()
+      positionTitle: finalPosition,
+      experience: finalLevel,
+      count: finalQuestionCount,
     };
 
     try {
-      const response = await fetch('/api/mock-interview', {
+      const response = await fetch('http://localhost:3000/api/app/generate-questions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(interviewData)
       });
+      console.log(interviewData);
       
       if (response.ok) {
-        const data: InterviewData = await response.json();
+        const data: any = await response.json(); // Keep as any since backend returns object
         console.log('Mock interview session created:', data);
         
-        // Validate that we received 5 questions
-        if (data.questions && data.questions.length === 5) {
-          setSearchResults(data);
-          
-          // Navigate to interview page with questions
-          if (onInterviewStart) {
-            onInterviewStart(data);
+        // Convert object to array - extract question values
+        let questionsArray: string[] = [];
+        
+        if (data && typeof data === 'object') {
+          // If data has a questions property that's already an array
+          if (data.questions && Array.isArray(data.questions)) {
+            questionsArray = data.questions;
+          } 
+          // If data is an object with numeric keys (0, 1, 2, 3, 4...)
+          else {
+            // Get all numeric keys and sort them
+            const numericKeys = Object.keys(data)
+              .filter(key => !isNaN(Number(key))) // Only numeric keys
+              .sort((a, b) => Number(a) - Number(b)); // Sort numerically
+            
+            questionsArray = numericKeys.map(key => data[key]);
+            
+            // Alternative fallback: if no numeric keys, try any string values
+            if (questionsArray.length === 0) {
+              questionsArray = Object.values(data).filter(value => 
+                typeof value === 'string' && value.length > 10
+              ) as string[];
+            }
           }
+        }
+        
+        console.log('Converted questions array:', questionsArray);
+        
+        // Validate that we have questions
+        if (questionsArray && questionsArray.length > 0) {
+          const interviewData: InterviewData = {
+            questions: questionsArray
+          };
+          
+          setSearchResults(interviewData);
+          
+          // Pass questions to parent component via callback
+          if (onInterviewStart) {
+            onInterviewStart(interviewData);
+          }
+          
         } else {
-          throw new Error('Invalid response: Expected 5 questions from backend');
+          throw new Error('Invalid response: No questions found in backend response');
         }
       } else {
         throw new Error('Failed to create mock interview session');
@@ -353,6 +422,34 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
     setSelectedLevel('');
   }, []);
 
+  const handleQuestionCountSelect = useCallback((count: number): void => {
+    setSelectedQuestionCount(count);
+    setShowCustomQuestionCount(false);
+    setCustomQuestionCount('');
+  }, []);
+
+  const handleCustomQuestionCountToggle = useCallback((): void => {
+    setShowCustomQuestionCount(true);
+    setSelectedQuestionCount(0);
+  }, []);
+
+  // Type-safe wrappers for onSelect handlers
+  const handleCompanySelectWrapper = useCallback((item: any) => {
+    handleCompanySelect(item as string);
+  }, []);
+
+  const handlePositionSelectWrapper = useCallback((item: any) => {
+    handlePositionSelect(item as string);
+  }, []);
+
+  const handleLevelSelectWrapper = useCallback((item: any) => {
+    handleLevelSelect(item as string);
+  }, []);
+
+  const handleQuestionCountSelectWrapper = useCallback((item: any) => {
+    handleQuestionCountSelect(item as number);
+  }, []);
+
   // Optional preview component (can remove if using direct router navigation)
   const InterviewSetupResults: React.FC = () => (
     <div className="min-h-screen bg-gray-900 p-6">
@@ -362,9 +459,56 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
           <p className="text-xl text-gray-300">
             Your AI mock interview for {finalPosition} at {finalCompany} ({finalLevel}) is ready to begin
           </p>
+          <p className="text-lg text-gray-400 mt-2">{finalQuestionCount} questions prepared</p>
         </div>
+        
         <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 shadow-2xl">
-          <p className="text-white">Redirecting to interview...</p>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white">Interview Questions Ready</h2>
+            <button
+              onClick={() => setShowResults(false)}
+              className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              ← Back to Setup
+            </button>
+          </div>
+          
+          <div className="grid md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-300 mb-2">Company</h3>
+              <p className="text-white">{finalCompany}</p>
+            </div>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-300 mb-2">Position</h3>
+              <p className="text-white">{finalPosition}</p>
+            </div>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-300 mb-2">Level</h3>
+              <p className="text-white">{finalLevel}</p>
+            </div>
+            <div className="bg-gray-700 p-4 rounded-lg">
+              <h3 className="font-semibold text-purple-300 mb-2">Questions</h3>
+              <p className="text-white">{finalQuestionCount}</p>
+            </div>
+          </div>
+
+          {searchResults && (
+            <div className="border-t border-gray-600 pt-6">
+              <h3 className="text-xl font-bold text-white mb-4">Preview Questions</h3>
+              <div className="bg-gray-700 p-4 rounded-lg">
+                <p className="mb-4 text-green-400">✅ {searchResults.questions.length} interview questions generated successfully!</p>
+                
+                <div className="bg-gray-600 p-4 rounded-lg">
+                  {searchResults.questions.map((question, index) => (
+                    <div key={index} className="mb-3 p-3 bg-gray-500 rounded">
+                      <span className="text-purple-300 font-medium">Q{index + 1}:</span>
+                      <span className="text-white ml-2">{question}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -392,7 +536,7 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
           icon={Building}
           items={filteredCompanies}
           selectedItem={selectedCompany}
-          onSelect={handleCompanySelect}
+          onSelect={handleCompanySelectWrapper}
           searchValue={companySearch}
           onSearchChange={(e) => setCompanySearch(e.target.value)}
           type="company"
@@ -411,7 +555,7 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
           icon={Briefcase}
           items={filteredPositions}
           selectedItem={selectedPosition}
-          onSelect={handlePositionSelect}
+          onSelect={handlePositionSelectWrapper}
           searchValue={positionSearch}
           onSearchChange={(e) => setPositionSearch(e.target.value)}
           type="position"
@@ -430,7 +574,7 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
           icon={Users}
           items={filteredLevels}
           selectedItem={selectedLevel}
-          onSelect={handleLevelSelect}
+          onSelect={handleLevelSelectWrapper}
           searchValue={levelSearch}
           onSearchChange={(e) => setLevelSearch(e.target.value)}
           type="level"
@@ -441,6 +585,25 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
           onCustomChange={(e) => setCustomLevel(e.target.value)}
           customPlaceholder="Type experience level..."
           customRef={customLevelRef}
+        />
+
+        {/* Number of Questions Section */}
+        <BubbleSection
+          title="Number of Questions"
+          icon={Search}
+          items={QUESTION_COUNTS}
+          selectedItem={selectedQuestionCount}
+          onSelect={handleQuestionCountSelectWrapper}
+          searchValue="" // No search for question count
+          onSearchChange={() => {}} // No search for question count
+          type="questionCount"
+          searchId="question-count-search"
+          showCustom={showCustomQuestionCount}
+          onCustomToggle={handleCustomQuestionCountToggle}
+          customValue={customQuestionCount}
+          onCustomChange={(e) => setCustomQuestionCount(e.target.value)}
+          customPlaceholder="Enter number (1-20)..."
+          customRef={customQuestionCountRef}
         />
 
         {/* Submit Section */}
@@ -483,4 +646,4 @@ const Home: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) => {
   );
 };
 
-export default Home;
+export default PodiumJobSearch;
