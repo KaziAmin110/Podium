@@ -49,9 +49,8 @@ const InterviewPage = ({
 
   // --- NEW: Function to handle moving to the next question ---
   const handleNavigateNext = () => {
-    const nextQuestionNumber = currentQuestion + 1;
-    if (nextQuestionNumber <= totalQuestions) {
-      setCurrentQuestion(nextQuestionNumber);
+    if (currentQuestion <= totalQuestions) {
+      setCurrentQuestion(currentQuestion + 1);
     }
   };
 
