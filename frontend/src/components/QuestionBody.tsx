@@ -1,20 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 
-// --- Type Definition ---
 export interface ResponseData {
   videoUrl: string;
   videoBlob?: Blob;
 }
 
-// --- NEW: Configuration for Video Recording ---
-// Check if the browser supports recording in MP4 format. Fallback to webm if not.
-const supportedMimeType = MediaRecorder.isTypeSupported("video/mp4")
-  ? "video/mp4"
-  : "video/webm";
-// Determine the file extension based on the supported MIME type.
-const fileExtension = supportedMimeType.split("/")[1];
-
-// --- Props Interface ---
+// --- NEW: Props interface updated ---
 interface QuestionBodyProps {
   currentQuestionIndex: number;
   question: string;
@@ -94,8 +85,7 @@ const QuestionBody = ({
     if (!stream) return;
     setIsRecording(true);
     videoChunks.current = [];
-    // --- MODIFIED: Use the dynamically determined MIME type ---
-    const media = new MediaRecorder(stream, { mimeType: supportedMimeType });
+    const media = new MediaRecorder(stream, { mimeType: "video/webm" });
     mediaRecorder.current = media;
     mediaRecorder.current.start();
     mediaRecorder.current.ondataavailable = (e) => {
@@ -106,10 +96,7 @@ const QuestionBody = ({
   const stopRecording = () => {
     if (!mediaRecorder.current) return;
     mediaRecorder.current.onstop = () => {
-      // --- MODIFIED: Create a Blob with the correct MIME type ---
-      const videoBlob = new Blob(videoChunks.current, {
-        type: supportedMimeType,
-      });
+      const videoBlob = new Blob(videoChunks.current, { type: "video/webm" });
       onResponseChange({
         videoUrl: URL.createObjectURL(videoBlob),
         videoBlob: videoBlob,
@@ -135,13 +122,13 @@ const QuestionBody = ({
             key={response.videoUrl}
           ></video>
           <div className="action-buttons">
-            {/* --- MODIFIED: Use the dynamic file extension for download --- */}
-            <a href={response.videoUrl} download={`response.${fileExtension}`}>
+            <a href={response.videoUrl} download={`response.webm`}>
               Download
             </a>
             <button onClick={handleReset} className="delete-btn">
               Delete Response
             </button>
+            {/* --- NEW: Conditional "Next" Button --- */}
             {!isLastQuestion && (
               <button onClick={onNavigateNext} className="next-btn">
                 Next Question &rarr;
@@ -153,7 +140,7 @@ const QuestionBody = ({
     );
   }
 
-  // --- (The rest of the component is unchanged) ---
+  // --- (The rest of the component's return statements are unchanged) ---
   if (permission && stream) {
     return (
       <div className="question-body">
@@ -196,6 +183,7 @@ const QuestionBody = ({
           style={{ display: "none" }}
         />
       </div>
+      {/* --- NEW: Style for the "Next" button --- */}
       <style>{`
           .next-btn {
             background-color: #28a745;

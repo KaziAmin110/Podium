@@ -12,13 +12,6 @@ const InterviewPage = ({
     Record<number, ResponseData | null>
   >({});
 
-  // const questions: Record<number, string> = {
-  //   1: "What is your greatest strength?",
-  //   2: "What is your greatest weakness?",
-  //   3: "Why do you want to work here?",
-  //   4: "Describe a challenge you've faced at work.",
-  //   5: "Where do you see yourself in five years?",
-  // };
   const totalQuestions = Object.keys(questions).length;
 
   const highestAnswered = Object.keys(responses)
@@ -49,9 +42,11 @@ const InterviewPage = ({
 
   // --- NEW: Function to handle moving to the next question ---
   const handleNavigateNext = () => {
-    if (currentQuestion <= totalQuestions) {
-      setCurrentQuestion(currentQuestion + 1);
+    const nextQuestionNumber = currentQuestion + 1;
+    if (nextQuestionNumber <= totalQuestions) {
+      setCurrentQuestion(nextQuestionNumber);
     }
+    console.log(1);
   };
 
   return (
