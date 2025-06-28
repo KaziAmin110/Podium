@@ -26,8 +26,6 @@ const InterviewPage = () => {
         <QuestionBody
           currentQuestionIndex={currentQuestion}
           question={questions[currentQuestion]}
-          auth={null}
-          storage={null}
         />
       </section>
     </div>
