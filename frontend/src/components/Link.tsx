@@ -1,17 +1,11 @@
-import React from "react";
-interface LinkProps {
-  to: string;
-  children: React.ReactNode;
-}
+import React, { type ReactNode } from "react";
 
-const Link = ({ to, children }: LinkProps) => {
+const Link = ({ to, children }: { to: string; children: ReactNode }) => {
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     window.history.pushState({}, "", to);
-    const navigationEvent = new PopStateEvent("navigate");
-    window.dispatchEvent(navigationEvent);
+    window.dispatchEvent(new PopStateEvent("navigate"));
   };
-
   return (
     <a href={to} onClick={handleClick} className="nav-link">
       {children}
