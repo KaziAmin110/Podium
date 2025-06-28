@@ -19,6 +19,7 @@ interface QuestionBodyProps {
 }
 
 const QuestionBody = ({
+  currentQuestionIndex,
   question,
   company = "Amazon",
   positionTitle = "Software Engineer",
@@ -81,47 +82,47 @@ const QuestionBody = ({
     videoBlob: Blob
   ) => {
     const apiUrl = "http://localhost:3000/api/app/generate-reviews";
-    const requestBody = {
-      positionTitle: positionTitle,
-      company: company,
-      experience: experience,
-      question: { question },
-      video: videoBlob,
-    };
+
+    // Create FormData to match the curl request format
+    const formData = new FormData();
+    formData.append("question", question);
+    formData.append("company", company);
+    formData.append("positionTitle", positionTitle);
+    formData.append("experience", experience);
+    formData.append(
+      "video",
+      videoBlob,
+      `response-question-${currentQuestionIndex}.mp4`
+    );
+
+    console.log("Sending FormData with video blob:", videoBlob);
 
     try {
-      // 1. Send the POST request to your backend API.
+      // Send the POST request with FormData (no Content-Type header needed - browser sets it automatically)
       const response = await fetch(apiUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
+        body: formData, // Send FormData directly, not JSON
       });
 
-      // 2. Check if the request was successful.
+      // Check if the request was successful
       if (!response.ok) {
-
         console.error(
           `API request failed with status ${response.status}: ${response.statusText}`
         );
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      // Optional: You can process the response from the server if needed.
-      // const data = await response.json();
-      // console.log("Received data from server:", data);
-
-      // 3. If the request was successful, navigate to the interview page.
-      // This uses the same routing mechanism as your Link component to prevent a page refresh.
+      // Process the response from the server
       const data = await response.json();
-      console.log(data);
+      console.log("Received data from server:", data);
       return data;
     } catch (error) {
       console.error("Failed to start interview:", error);
-      // Inform the user that something went wrong.
+      // Inform the user that something went wrong
       alert(
         "Could not start the interview. Please ensure the local server is running and try again."
       );
+      throw error; // Re-throw to allow caller to handle if needed
     }
   };
 
@@ -143,7 +144,14 @@ const QuestionBody = ({
     if (!stream) return;
     setIsRecording(true);
     videoChunks.current = [];
-    const media = new MediaRecorder(stream, { mimeType: "video/webm" });
+
+    // Check if video/mp4 is supported, fallback to video/webm
+    let mimeType = "video/mp4";
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = "video/webm";
+    }
+
+    const media = new MediaRecorder(stream, { mimeType });
     mediaRecorder.current = media;
     mediaRecorder.current.start();
     mediaRecorder.current.ondataavailable = (e) => {
@@ -154,7 +162,10 @@ const QuestionBody = ({
   const stopRecording = () => {
     if (!mediaRecorder.current) return;
     mediaRecorder.current.onstop = () => {
-      const videoBlob = new Blob(videoChunks.current, { type: "video/webm" });
+      // Use the same mimeType that was used for recording
+      const mimeType = mediaRecorder.current?.mimeType || "video/webm";
+      const videoBlob = new Blob(videoChunks.current, { type: mimeType });
+
       onResponseChange({
         videoUrl: URL.createObjectURL(videoBlob),
         videoBlob: videoBlob,
@@ -168,25 +179,46 @@ const QuestionBody = ({
   };
 
   if (response) {
+    // Ensure we have a valid video URL
+    let displayVideoUrl = response.videoUrl;
+
+    // If video URL is invalid but we have a blob, create a new URL
+    if (
+      response.videoBlob &&
+      (!displayVideoUrl || !displayVideoUrl.startsWith("blob:"))
+    ) {
+      displayVideoUrl = URL.createObjectURL(response.videoBlob);
+    }
+
     return (
       <div className="question-body">
         <h2>{question}</h2>
         <div className="video-player">
           <h3>Your Response:</h3>
           <video
-            src={response.videoUrl}
+            src={displayVideoUrl}
             controls
             playsInline
-            key={response.videoUrl}
+            key={displayVideoUrl} // Force re-render when URL changes
+            onError={(e) => {
+              console.error("Video playback error:", e);
+              if (response.videoBlob) {
+                const newUrl = URL.createObjectURL(response.videoBlob);
+                e.currentTarget.src = newUrl;
+              }
+            }}
           ></video>
           <div className="action-buttons">
-            <a href={response.videoUrl} download={`response.mp4`}>
+            <a
+              href={displayVideoUrl}
+              download={`response-question-${currentQuestionIndex}.mp4`}
+            >
               Download
             </a>
             <button onClick={handleReset} className="delete-btn">
               Delete Response
             </button>
-            {/* --- NEW: Conditional "Next" Button --- */}
+
             {!isLastQuestion && (
               <button onClick={onNavigateNext} className="next-btn">
                 Next Question &rarr;
@@ -194,9 +226,21 @@ const QuestionBody = ({
             )}
             {isLastQuestion && (
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (response.videoBlob) {
-                    handleSubmitClick(question, company, positionTitle, experience, response.videoBlob);
+                    try {
+                      await handleSubmitClick(
+                        question,
+                        company,
+                        positionTitle,
+                        experience,
+                        response.videoBlob
+                      );
+                      alert("Interview submitted successfully!");
+                    } catch (error) {
+
+                      console.error("Submission failed:", error);
+                    }
                   } else {
                     alert("No video response found to submit.");
                   }
@@ -212,7 +256,7 @@ const QuestionBody = ({
     );
   }
 
-  // --- (The rest of the component's return statements are unchanged) ---
+  // --- Recording view ---
   if (permission && stream) {
     return (
       <div className="question-body">
@@ -255,11 +299,104 @@ const QuestionBody = ({
           style={{ display: "none" }}
         />
       </div>
-      {/* --- NEW: Style for the "Next" button --- */}
       <style>{`
           .next-btn {
             background-color: #28a745;
             color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+          }
+          .next-btn:hover {
+            background-color: #218838;
+          }
+          .delete-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+          }
+          .delete-btn:hover {
+            background-color: #c82333;
+          }
+          .record-btn {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+          }
+          .record-btn:hover {
+            background-color: #0056b3;
+          }
+          .recording-btn {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            animation: pulse 1.5s infinite;
+          }
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+          .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+          }
+          .action-buttons a {
+            background-color: #6c757d;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            display: inline-block;
+          }
+          .action-buttons a:hover {
+            background-color: #545b62;
+          }
+          .initial-choice-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+          }
+          .initial-choice-buttons button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+          }
+          .initial-choice-buttons button:hover {
+            background-color: #0056b3;
+          }
+          .video-player {
+            margin-top: 20px;
+          }
+          .video-player video {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+          }
+          .live-preview {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 8px;
+            border: 2px solid #007bff;
           }
       `}</style>
     </div>
