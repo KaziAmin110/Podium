@@ -1,26 +1,27 @@
 import { Router } from "express";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GoogleGenAI } from "@google/genai";
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 
 dotenv.config();
 
 const appRoutes = Router();
-const ai = new GoogleGenAI({});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 appRoutes.get("/test", (req, res) => {
   res.send("Hello from the App API!");
 });
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+function cleanJSONResponse(text) {
+  return text
+    .replace(/```json|```/g, '') // remove markdown code block markers
+    .trim();
+}
 
-// ...existing code...
-export async function generateInterviewQuestions(positionTitle, company, experience) {
+
+async function generateInterviewQuestions(positionTitle, company, experience) {
   const prompt = `
-You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company} with an experience level of "${experience}".
-The user has likely never worked at this organization before. Respond with questions typically askes at this company along with some general and technical ones.
-Do not include any explanations or additional text, just return the questions in a JSON format like this. This is being used in an API which expects a JSON response exactly as follows.
-Respond ONLY in the following JSON format:
+You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
+Respond ONLY in this JSON format:
 {
   "0": "First question?",
   "1": "Second question?",
@@ -29,25 +30,32 @@ Respond ONLY in the following JSON format:
   "4": "Fifth question?"
 }
 `;
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash-lite-preview-06-17",
-    contents: prompt,
-  });
-  const text = response.text;
-  return text;
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const result = await model.generateContent(prompt);
+  const rawText = result.response.candidates[0].content.parts[0].text;
+  const cleanedText = cleanJSONResponse(rawText);
+
+  try {
+    const parsed = JSON.parse(cleanedText);
+    return parsed;
+  } catch (err) {
+    return { error: "Failed to parse response from AI", raw: cleanedText };
+  }
 }
-//
 
 appRoutes.post("/generate-questions", async (req, res) => {
-  console.log("Received POST /generate-questions with body:", req.body);
   const { positionTitle, company, experience } = req.body;
-  if ((!positionTitle || !company) || ! experience) {
-    return res.status(400).json({ error: "positionTitle and company are required" });
+  if (!positionTitle || !company || !experience) {
+    return res.status(400).json({ error: "positionTitle, company, and experience are required" });
   }
-  const questions = await generateInterviewQuestions(positionTitle, company);
-  console.log("Generated questions:", questions);
-  res.send(questions);
-});
 
+  try {
+    const questions = await generateInterviewQuestions(positionTitle, company, experience);
+    if (questions.error) return res.status(500).json(questions);
+    res.json(questions);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default appRoutes;
