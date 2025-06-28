@@ -5,7 +5,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const appRoutes = Router();
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const ai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 appRoutes.get("/test", (req, res) => {
   res.send("Hello from the App API!");
@@ -31,7 +31,7 @@ Respond ONLY in this JSON format:
   "4": "Fifth question?"
 }
 `;
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = ai.getGenerativeModel({ model: "gemini-1.5-flash" });
   const result = await model.generateContent(prompt);
   const rawText = result.response.candidates[0].content.parts[0].text;
   const cleanedText = cleanJSONResponse(rawText);
@@ -61,26 +61,37 @@ appRoutes.post("/generate-questions", async (req, res) => {
 
 
 //Generate reviews
-import { getDatabase, ref, get, child } from "firebase/database";
+const upload = multer();
+const model = "gemini-1.5-pro";
 
-const db = getDatabase();
-const dbRef = ref(db);
+import multer from "multer";
+import { promises as fs } from "fs";
+import path from "path";
 
-appRoutes.post("/generate-reviews", async (req, res) => {
-  const { userID, videoID } = req.body;
 
-  try {
-    const snapshot = await get(child(dbRef, `reviews/${userID}/${videoID}`));
+appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => {
+  const question = req.body.question;
+  const tempPath = path.resolve("./temp/video.mp4");
 
-    if (!snapshot.exists()) {
-      return res.status(404).json({ message: "No reviews found" });
-    }
+  await fs.mkdir(path.dirname(tempPath), { recursive: true });
+  await fs.writeFile(tempPath, req.file.buffer);
 
-    const reviews = snapshot.val();
-    res.json(reviews);
-  } catch (error) {
-    res.status(500).json({ message: "Error retrieving reviews", error });
-  }
+  const myfile = await ai.files.upload({
+    file: tempPath,
+    config: { mimeType: req.file.mimetype },
+  });
+
+  const contents = [
+    { type: "video", uri: myfile.uri, mimeType: myfile.mimeType },
+    { type: "text", text: `Review this interview based on how well the participant answered the question: "${question}"` },
+  ];
+
+  const response = await ai.models.generateContent({ model, contents });
+
+  await fs.unlink(tempPath);
+
+  res.json({ review: response.text });
 });
+
 
 export default appRoutes;
