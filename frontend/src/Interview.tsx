@@ -8,9 +8,10 @@ interface InterviewData {
 interface InterviewProps {
   data: InterviewData | null;
   onExit: () => void;
+  onComplete: (answers: string[]) => void;
 }
 
-const Interview: React.FC<InterviewProps> = ({ data, onExit }) => {
+const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
 
@@ -50,8 +51,22 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit }) => {
   };
 
   const handleCompleteInterview = (): void => {
-    alert('Interview completed! Great job!');
-    onExit(); // Go back to home
+    // Ensure all answers are captured before completing
+    const finalAnswers = [...answers];
+    
+    // Fill in any missing answers with empty strings
+    while (finalAnswers.length < data.questions.length) {
+      finalAnswers.push('');
+    }
+    
+    // Call the completion handler with all answers
+    onComplete(finalAnswers);
+  };
+
+  const handleAnswerChange = (value: string): void => {
+    const newAnswers = [...answers];
+    newAnswers[currentQuestionIndex] = value;
+    setAnswers(newAnswers);
   };
 
   const currentQuestion = data.questions[currentQuestionIndex];
@@ -103,12 +118,16 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit }) => {
               className="w-full h-32 bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               placeholder="Type your answer here..."
               value={answers[currentQuestionIndex] || ''}
-              onChange={(e) => {
-                const newAnswers = [...answers];
-                newAnswers[currentQuestionIndex] = e.target.value;
-                setAnswers(newAnswers);
-              }}
+              onChange={(e) => handleAnswerChange(e.target.value)}
             />
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-xs text-gray-400">
+                {answers[currentQuestionIndex]?.length || 0} characters
+              </p>
+              {answers[currentQuestionIndex] && answers[currentQuestionIndex].trim() && (
+                <span className="text-xs text-green-400">✓ Answer saved</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -151,7 +170,7 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit }) => {
                 className={`w-8 h-8 rounded-full text-sm font-medium transition-colors ${
                   index === currentQuestionIndex
                     ? 'bg-purple-600 text-white'
-                    : answers[index]
+                    : answers[index] && answers[index].trim()
                     ? 'bg-green-600 text-white'
                     : 'bg-gray-600 text-gray-300 hover:bg-gray-500'
                 }`}
@@ -160,6 +179,9 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit }) => {
               </button>
             ))}
           </div>
+          <p className="text-xs text-gray-400 mt-2">
+            {answers.filter(answer => answer && answer.trim()).length} of {data.questions.length} questions answered
+          </p>
         </div>
       </div>
     </div>
