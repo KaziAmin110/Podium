@@ -106,13 +106,17 @@ appRoutes.post("/submit-all-reviews", upload.array("videos"), async (req, res) =
       },
       {
         text: `
-Review the candidate's answer to this interview question harshly and score it from 1 to 10.
-You are also responding to the user; address them as "you". Focus on knowledge, communication, and body language.
-Provide JSON:
+You are a strict evaluation assistant. You must ONLY return a valid JSON object with no extra explanation or commentary.
+
+Review the candidate’s answer to this interview question harshly and score it from 1 to 10.
+
+Speak directly to the user in second person ("you"). Focus on their knowledge, communication, and body language.
+
+⚠️ Return only this valid JSON format, with nothing else:
 {
   "score": int,
-  "strengths": [list],
-  "weaknesses": [list],
+  "strengths": [string],
+  "weaknesses": [string],
   "overall_feedback": string
 }
 
@@ -129,7 +133,13 @@ Question: "${question}"
         model: "gemini-2.5-flash",
         contents,
       });
-      const parsed = JSON.parse(cleanJSONResponse(result.text));
+
+      const cleaned = cleanJSONResponse(result.text);
+      if (!cleaned.trim().startsWith("{")) throw new Error("Non-JSON response from Gemini");
+
+      const parsed = JSON.parse(cleaned);
+      if (!parsed.overall_feedback) throw new Error("Missing field in Gemini response");
+
       feedbacks.push({ question, ...parsed });
     } catch (err) {
       console.error(`❌ Failed to analyze question ${i}:`, err);
@@ -161,7 +171,10 @@ ${feedbacks
       contents: summaryPrompt,
     });
 
-    const summaryData = JSON.parse(cleanJSONResponse(result.text));
+    const cleaned = cleanJSONResponse(result.text);
+    if (!cleaned.trim().startsWith("{")) throw new Error("Invalid summary format");
+
+    const summaryData = JSON.parse(cleaned);
 
     // --- Step 3: Store in Supabase ---
     const { error } = await supabase.from("interview_feedbacks").insert({
@@ -189,5 +202,7 @@ ${feedbacks
     res.status(500).json({ error: "Failed to generate summary or save results", detail: err.message });
   }
 });
+
+
 
 export default appRoutes;
