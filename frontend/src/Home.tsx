@@ -230,17 +230,15 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
       });
       
       if (response.ok) {
-        const data: any = await response.json();
-        console.log('Mock interview session created:', data);
-        
+        const data: Record<string, string> = await response.json();
         let questionsArray: string[] = [];
         
         if (data && typeof data === 'object') {
           if (data.questions && Array.isArray(data.questions)) {
             questionsArray = data.questions;
           } else {
-            const numericKeys = Object.keys(data)
-              .filter(key => !isNaN(Number(key)))
+            const numericKeys: string[] = Object.keys(data)
+              .filter((key: string)  => !isNaN(Number(key)))
               .sort((a, b) => Number(a) - Number(b));
             
             questionsArray = numericKeys.map(key => data[key]);
@@ -252,8 +250,6 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
             }
           }
         }
-        
-        console.log('Converted questions array:', questionsArray);
         
         if (questionsArray && questionsArray.length > 0) {
           const interviewResult: InterviewData = {
@@ -280,30 +276,30 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-auto mx-auto  bg-gray-800 rounded-2xl p-8 border border-gray-400 shadow-2xl">
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-6xl font-bold text-white mb-4">
             Welcome to Podium
           </h1>
-          <p className="text-xl text-gray-300">Practice with AI-powered mock interviews tailored to your role</p>
+          <p className="text-xl text-gray-300">Practice with AI-powered mock interviews tailored to your aspiring role and company!</p>
         </div>
 
         {/* Companies Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <Building className="mr-3 w-7 h-7 text-purple-400" />
+        <div className="flex flex-col mb-8 w-full">
+          <div className="flex flex-col items-center justify-between mb-4 md:flex-row ">
+            <h2 className="text-2xl font-bold text-white flex items-center mb-3">
+              <Building className="mr-3 w-10 h-7 text-purple-400" />
               Select Company
             </h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <div className="relative w-60">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w- h-5" />
               <input
                 type="text"
-                placeholder="Search companies..."
+                placeholder="Search company..."
                 value={companySearch}
                 onChange={(e) => setCompanySearch(e.target.value)}
-                className="bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent w-64"
+                className="bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent w-full"
               />
             </div>
           </div>
@@ -322,7 +318,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
           )}
 
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 max-w-3xl w-full">
+            <div className="flex flex-col md:grid grid-cols-4 lg:grid-cols-6 gap-3  w-full">
               <div
                 onClick={handleCustomCompanyToggle}
                 className="relative cursor-pointer transition-all duration-300 transform hover:scale-105"
@@ -334,7 +330,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-sm">
                       <Plus className="w-4 h-4" />
                     </div>
-                    <span className="text-white font-semibold text-xs">Custom</span>
+                    <span className="text-white font-semibold txt-md">Custom</span>
                   </div>
                   {showCustomCompany && (
                     <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -352,10 +348,10 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                     selectedCompany === company.name ? 'border-white' : 'border-transparent'
                   }`}>
                     <div className="flex flex-col items-center text-center">
-                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-xs">
+                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold txt-md">
                         {company.initials}
                       </div>
-                      <span className="text-white font-semibold text-xs truncate w-full px-1">{company.name}</span>
+                      <span className="text-white font-semibold txt-md truncate w-full px-1">{company.name}</span>
                     </div>
                     {selectedCompany === company.name && (
                       <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -368,9 +364,9 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
         </div>
 
         {/* Positions Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
+        <div className="flex flex-col mb-8">
+          <div className="flex flex-col items-center justify-between mb-4 md:flex-row">
+            <h2 className="text-2xl font-bold text-white flex items-center mb-3">
               <Briefcase className="mr-3 w-7 h-7 text-purple-400" />
               Choose Position
             </h2>
@@ -378,7 +374,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search positions..."
+                placeholder="Search position..."
                 value={positionSearch}
                 onChange={(e) => setPositionSearch(e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent w-64"
@@ -400,7 +396,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
           )}
 
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 max-w-3xl w-full">
+            <div className="flex flex-col md:grid grid-cols-4 lg:grid-cols-6 gap-3 w-full">
               <div
                 onClick={handleCustomPositionToggle}
                 className="relative cursor-pointer transition-all duration-300 transform hover:scale-105"
@@ -412,7 +408,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-sm">
                       <Plus className="w-4 h-4" />
                     </div>
-                    <span className="text-white font-semibold text-xs">Custom</span>
+                    <span className="text-white font-semibold txt-md">Custom</span>
                   </div>
                   {showCustomPosition && (
                     <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -431,7 +427,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                   }`}>
                     <div className="flex flex-col items-center text-center">
                       <div className="text-lg mb-1">{position.icon}</div>
-                      <span className="text-white font-semibold text-xs leading-tight text-center px-1 truncate w-full">{position.name}</span>
+                      <span className="text-white font-semibold txt-md leading-tight text-center px-1 truncate w-full">{position.name}</span>
                     </div>
                     {selectedPosition === position.name && (
                       <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -444,9 +440,9 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
         </div>
 
         {/* Experience Level Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
+        <div className="flex flex-col mb-8">
+          <div className="flex flex-col items-center justify-between mb-4 md:flex-row">
+            <h2 className="text-2xl font-bold text-white flex items-center mb-3">
               <Users className="mr-3 w-7 h-7 text-purple-400" />
               Experience Level
             </h2>
@@ -454,7 +450,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Search experience levels..."
+                placeholder="Search experience level..."
                 value={levelSearch}
                 onChange={(e) => setLevelSearch(e.target.value)}
                 className="bg-gray-800 border border-gray-700 rounded-full pl-10 pr-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent w-64"
@@ -475,8 +471,8 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
             </div>
           )}
 
-          <div className="flex justify-center">
-            <div className="grid grid-cols-4 lg:grid-cols-6 gap-3 max-w-3xl w-full">
+          <div className="flex justify-center ">
+            <div className="flex flex-col md:grid grid-cols-4 lg:grid-cols-6 gap-3 w-full">
               <div
                 onClick={handleCustomLevelToggle}
                 className="relative cursor-pointer transition-all duration-300 transform hover:scale-105"
@@ -488,7 +484,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-sm">
                       <Plus className="w-4 h-4" />
                     </div>
-                    <span className="text-white font-semibold text-xs">Custom</span>
+                    <span className="text-white font-semibold text-md">Custom</span>
                   </div>
                   {showCustomLevel && (
                     <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -507,8 +503,8 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                   }`}>
                     <div className="flex flex-col items-center text-center">
                       <div className="text-lg mb-1">{level.icon}</div>
-                      <span className="text-white font-semibold text-xs mb-0 truncate w-full text-center">{level.name}</span>
-                      <span className="text-white/70 text-xs truncate w-full text-center px-1">{level.description}</span>
+                      <span className="text-white font-semibold txt-md mb-0 truncate w-full text-center">{level.name}</span>
+                      <span className="text-white/70 txt-xs truncate w-full text-center px-1">{level.description}</span>
                     </div>
                     {selectedLevel === level.name && (
                       <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -521,9 +517,9 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
         </div>
 
         {/* Number of Questions Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-white flex items-center">
+        <div className="flex flex-col mb-8">
+          <div className="flex flex-col items-center justify-between mb-4 md:flex-row">
+            <h2 className="text-2xl font-bold text-white flex items-center mb-3">
               <Search className="mr-3 w-7 h-7 text-purple-400" />
               Number of Questions
             </h2>
@@ -540,12 +536,12 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                 maxLength={2}
                 className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
-              <p className="text-xs text-gray-400 mt-2">Enter a number between 1 and 8</p>
+              <p className="txt-md text-gray-400 mt-2">Enter a number between 1 and 8</p>
             </div>
           )}
 
           <div className="flex justify-center">
-            <div className="grid grid-cols-4 gap-3 max-w-3xl w-full">
+            <div className="flex flex-col md:grid grid-cols-4 gap-3 w-full">
               <div
                 onClick={handleCustomQuestionCountToggle}
                 className="relative cursor-pointer transition-all duration-300 transform hover:scale-105"
@@ -557,7 +553,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                     <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mb-1 text-white font-bold text-sm">
                       <Plus className="w-4 h-4" />
                     </div>
-                    <span className="text-white font-semibold text-xs">Custom</span>
+                    <span className="text-white font-semibold txt-md">Custom</span>
                   </div>
                   {showCustomQuestionCount && (
                     <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -574,9 +570,8 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
                   <div className={`${count.color} p-3 rounded-xl shadow-lg border-2 h-20 w-full flex flex-col justify-center ${
                     selectedQuestionCount === count.value ? 'border-white' : 'border-transparent'
                   }`}>
-                    <div className="flex flex-col items-center text-center">
-                      <div className="text-xl mb-1 text-white font-bold">{count.value}</div>
-                      <span className="text-white font-semibold text-xs truncate w-full text-center px-1">{count.name}</span>
+                    <div className="flex items-center text-center">
+                      <span className="text-white font-semibold text-md truncate w-full text-center px-1">{count.name}</span>
                     </div>
                     {selectedQuestionCount === count.value && (
                       <CheckCircle className="absolute -top-1 -right-1 w-5 h-5 text-green-400 bg-gray-900 rounded-full" />
@@ -590,7 +585,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
 
         {/* Submit Section */}
         <div className="flex justify-center">
-          <div className="bg-gray-800 w-1/2 rounded-2xl p-8 border border-gray-700 shadow-2xl">
+          <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 shadow-2xl w-full md:w-3/4 lg:w-2/3 xl:w-1/2">
             {finalCompany && finalPosition && finalLevel && finalQuestionCount && (
               <div className="mb-6 p-4 bg-gray-700 rounded-lg">
                 <h3 className="text-white font-semibold mb-2">Your Mock Interview Setup:</h3>
