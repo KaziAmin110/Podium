@@ -590,7 +590,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
 
         {/* Submit Section */}
         <div className="flex justify-center">
-          <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 shadow-2xl">
+          <div className="bg-gray-800 w-1/2 rounded-2xl p-8 border border-gray-700 shadow-2xl">
             {finalCompany && finalPosition && finalLevel && finalQuestionCount && (
               <div className="mb-6 p-4 bg-gray-700 rounded-lg">
                 <h3 className="text-white font-semibold mb-2">Your Mock Interview Setup:</h3>
@@ -602,7 +602,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
             <button
               onClick={handleSubmit}
               disabled={!finalCompany || !finalPosition || !finalLevel || !finalQuestionCount || isSubmitting}
-              className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 shadow-lg text-lg"
+              className="bg-purple-600 w-full flex justify-center items-center cursor-pointer hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-semibold py-4 px-8 rounded-lg transition-all duration-200 shadow-lg text-lg"
             >
               {isSubmitting ? (
                 <>
