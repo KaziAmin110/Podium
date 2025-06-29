@@ -312,9 +312,9 @@ const Interview: React.FC<InterviewProps> = ({
     if (!permission || !stream) return null;
 
     return (
-      <div className="flex flex-col bg-gray-700 rounded-lg p-5 md:">
-        <h4 className="text-white font-medium mb-2 flex items-center text-sm">
-          <Camera className="w-4 h-4 mr-2 text-purple-400" />
+      <div className="flex flex-col rounded-lg p-5">
+        <h4 className="text-white font-medium mb-2 flex items-center text-xl">
+          <Camera className="w-8 h-8 mr-2 text-purple-400" />
           {isRecording ? "Recording..." : "Camera Ready"}
         </h4>
         <video
@@ -322,7 +322,7 @@ const Interview: React.FC<InterviewProps> = ({
           autoPlay
           muted
           playsInline
-          className="rounded-lg bg-black border border-purple-500 object-cover "
+          className="rounded-lg bg-black border border-purple-500 object-cover"
         />
         <div className="flex gap-2 mt-3">
           {!isRecording ? (
@@ -349,8 +349,8 @@ const Interview: React.FC<InterviewProps> = ({
 
   // Initial choice interface
   const renderInitialChoice = () => (
-    <div className="bg-gray-700 rounded-lg p-3">
-      <h4 className="text-white font-medium mb-2 text-sm">
+    <div className="rounded-lg p-3 self-center flex flex-col gap-4">
+      <h4 className="text-white font-medium mb-2 text-xl">
         Choose response method:
       </h4>
       <div className="flex gap-2 flex-wrap">
@@ -380,7 +380,7 @@ const Interview: React.FC<InterviewProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-gray-900 p-15 max-h-screen overflow-y-auto flex flex-col justify-around">
+    <div className="min-h-screen bg-gray-900 p-10 max-h-screen overflow-y-auto flex flex-col">
       {/* Compact Header */}
       <div className="flex justify-between items-start mb-3">
         <div>
@@ -425,23 +425,25 @@ const Interview: React.FC<InterviewProps> = ({
         </div>
 
         {/* Main Content in Two Columns */}
-        <div className="flex flex-col gap-10 mb-4 mt-5 md:flex-row md:gap-5 md:justify-between">
+        <div className="flex flex-col gap-10 mb-4 mt-5 md:flex-row md:gap-5 md:justify-between md:min-h-150">
           {/* Question Column */}
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:basis-1/2">
-            <h2 className="text-lg font-semibold text-purple-300 mb-2">
+            <h2 className="text-2xl font-semibold text-purple-300 mb-2">
               Question {currentQuestionIndex + 1}
             </h2>
-            <p className="text-white text-sm mb-3 leading-relaxed">
+            <p className="text-white text-xl mb-3 leading-relaxed">
               {currentQuestion}
             </p>
           </div>
 
           {/* Response Column */}
-          {currentResponse
-            ? renderVideoResponse()
-            : permission && stream
-            ? renderRecordingInterface()
-            : renderInitialChoice()}
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:basis-1/2 flex justify-center">
+            {currentResponse
+              ? renderVideoResponse()
+              : permission && stream
+              ? renderRecordingInterface()
+              : renderInitialChoice()}
+          </div>
         </div>
       </div>
 
@@ -450,7 +452,7 @@ const Interview: React.FC<InterviewProps> = ({
         <button
           onClick={handlePrevQuestion}
           disabled={currentQuestionIndex === 0}
-          className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm transition-colors mt-10"
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center mt-10"
         >
           Previous
         </button>
@@ -480,7 +482,7 @@ const Interview: React.FC<InterviewProps> = ({
           <button
             onClick={handleCompleteInterview}
             disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors font-semibold flex items-center"
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors font-semibold flex items-center mt-10"
           >
             {isSubmitting ? (
               <>
