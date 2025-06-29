@@ -1,68 +1,116 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
-
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+.app-wrapper {
+  background-color: #f9fafb; /* Equivalent to bg-gray-50 */
   min-height: 100vh;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.container {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 32px 16px;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+.text-center {
+  text-align: center;
+}
+
+/* Header and Navigation */
+.app-header {
+  background-color: #ffffff;
+  border-radius: 0.75rem; /* 12px */
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-title {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 700;
+  color: #4f46e5; /* Equivalent to text-indigo-600 */
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-link {
+  color: #4f46e5;
+  font-size: 1.125rem; /* 18px */
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  text-decoration: none;
+  transition: all 0.3s ease-in-out;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.nav-link:hover {
+  color: #3730a3; /* Equivalent to hover:text-indigo-800 */
+  text-decoration: underline;
+}
+
+/* Page Content Styles */
+.page-content {
+  background-color: #ffffff;
+  border-radius: 0.5rem; /* 8px */
+  padding: 32px;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+.page-title {
+  font-size: 2.25rem; /* 36px */
+  font-weight: 800; /* extrabold */
+  color: #111827; /* gray-900 */
+  margin-bottom: 16px;
+}
+
+.page-text {
+  font-size: 1.125rem; /* 18px */
+  color: #4b5563; /* gray-600 */
+  line-height: 1.6;
+}
+
+.not-found-title {
+  font-size: 3.75rem; /* 60px */
+  font-weight: 700;
+  color: #4f46e5;
+  margin-bottom: 1rem;
+}
+
+.not-found-subtitle {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 600;
+  color: #1f2937; /* gray-800 */
+  margin-bottom: 1rem;
+}
+
+/* Footer Styles */
+.app-footer {
+  text-align: center;
+  color: #6b7280; /* gray-500 */
+  margin-top: 64px;
+  font-size: 0.875rem; /* 14px */
+}
+
+/* Animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  a:hover {
-    color: #747bff;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  button {
-    background-color: #f9f9f9;
-  }
+}
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
 }
