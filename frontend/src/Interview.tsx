@@ -269,8 +269,8 @@ const Interview: React.FC<InterviewProps> = ({
 
     return (
       <div className="bg-gray-700 rounded-lg p-3">
-        <h4 className="text-white font-medium mb-2 flex items-center text-sm">
-          <Video className="w-4 h-4 mr-2 text-purple-400" />
+        <h4 className="text-white font-medium mb-2 flex items-center text-xl">
+          <Video className="w-8 h-8 mr-2 text-purple-400" />
           Your Response
         </h4>
         <video
@@ -312,7 +312,7 @@ const Interview: React.FC<InterviewProps> = ({
     if (!permission || !stream) return null;
 
     return (
-      <div className="flex flex-col rounded-lg p-5">
+      <div className="bg-gray-700 flex flex-col  p-5 rounded-lg">
         <h4 className="text-white font-medium mb-2 flex items-center text-xl">
           <Camera className="w-8 h-8 mr-2 text-purple-400" />
           {isRecording ? "Recording..." : "Camera Ready"}
@@ -324,7 +324,7 @@ const Interview: React.FC<InterviewProps> = ({
           playsInline
           className="rounded-lg bg-black border border-purple-500 object-cover"
         />
-        <div className="flex gap-2 mt-3">
+        <div className="bg-gray-700 flex gap-2 mt-3 rounded-full">
           {!isRecording ? (
             <button
               onClick={startRecording}
