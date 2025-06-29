@@ -138,42 +138,84 @@ const Interview: React.FC<InterviewProps> = ({
     setIsRecording(true);
     videoChunks.current = [];
 
+    // Try different MIME types for better compatibility
     let mimeType = "video/mp4";
     if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = "video/webm";
+      mimeType = "video/webm;codecs=vp9,opus";
+    }
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = "video/webm:;codecs=vp8,opus";
     }
 
-    const media = new MediaRecorder(stream, { mimeType });
+    console.log("Using MIME type:", mimeType);
+
+    const media = new MediaRecorder(stream, {
+      mimeType,
+      videoBitsPerSecond: 1000000, // 1 Mbps
+      audioBitsPerSecond: 128000, // 128 kbps
+    });
+
     mediaRecorder.current = media;
-    mediaRecorder.current.start();
+
     mediaRecorder.current.ondataavailable = (e) => {
-      if (e.data.size > 0) videoChunks.current.push(e.data);
+      if (e.data.size > 0) {
+        console.log("Received chunk:", e.data.size, "bytes");
+        videoChunks.current.push(e.data);
+      }
     };
+
+    mediaRecorder.current.onerror = (e) => {
+      console.error("MediaRecorder error:", e);
+    };
+
+    // Record in smaller chunks for better compatibility
+    mediaRecorder.current.start(1000); // 1 second chunks
   };
 
   const stopRecording = () => {
     if (!mediaRecorder.current) return;
+
     mediaRecorder.current.onstop = () => {
-      const mimeType = mediaRecorder.current?.mimeType || "video/webm";
-      const videoBlob = new Blob(videoChunks.current, { type: mimeType });
-
-      const newResponse: ResponseData = {
-        videoUrl: URL.createObjectURL(videoBlob),
-        videoBlob: videoBlob,
-      };
-
-      setResponses((prev) => {
-        const oldResponse = prev[currentQuestionIndex];
-        if (oldResponse?.videoUrl) {
-          URL.revokeObjectURL(oldResponse.videoUrl);
+      // Wait a brief moment for all data to be collected
+      setTimeout(() => {
+        if (videoChunks.current.length === 0) {
+          console.error("No video chunks recorded");
+          alert("Recording failed - no data was captured. Please try again.");
+          return;
         }
-        return { ...prev, [currentQuestionIndex]: newResponse };
-      });
 
-      stream?.getTracks().forEach((track) => track.stop());
-      setPermission(false);
-      setStream(null);
+        const mimeType = mediaRecorder.current?.mimeType || "video/mp4";
+        const videoBlob = new Blob(videoChunks.current, { type: mimeType });
+
+        console.log("Created video blob:", {
+          size: videoBlob.size,
+          type: videoBlob.type,
+          chunks: videoChunks.current.length,
+        });
+
+        // Create the video URL immediately
+        const videoUrl = URL.createObjectURL(videoBlob);
+
+        const newResponse: ResponseData = {
+          videoUrl: videoUrl,
+          videoBlob: videoBlob,
+        };
+
+        setResponses((prev) => {
+          const oldResponse = prev[currentQuestionIndex];
+          if (oldResponse?.videoUrl) {
+            URL.revokeObjectURL(oldResponse.videoUrl);
+          }
+          return { ...prev, [currentQuestionIndex]: newResponse };
+        });
+
+        // Stop the camera stream after recording
+        stream?.getTracks().forEach((track) => track.stop());
+        setPermission(false);
+        setStream(null);
+      }, 100);
     };
+
     mediaRecorder.current.stop();
     setIsRecording(false);
   };
@@ -255,17 +297,9 @@ const Interview: React.FC<InterviewProps> = ({
   const currentResponse = responses[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
-  // Video response display
+  // Enhanced video response display
   const renderVideoResponse = () => {
     if (!currentResponse) return null;
-
-    let displayVideoUrl = currentResponse.videoUrl;
-    if (
-      currentResponse.videoBlob &&
-      (!displayVideoUrl || !displayVideoUrl.startsWith("blob:"))
-    ) {
-      displayVideoUrl = URL.createObjectURL(currentResponse.videoBlob);
-    }
 
     return (
       <div className="bg-gray-700 rounded-lg p-3">
@@ -274,22 +308,64 @@ const Interview: React.FC<InterviewProps> = ({
           Your Response
         </h4>
         <video
-          src={displayVideoUrl}
+          key={currentResponse.videoUrl} // Force re-render when URL changes
+          src={currentResponse.videoUrl}
           controls
           playsInline
-          className="w-full rounded-lg bg-black"
+          preload="auto"
+          muted={false}
+          className="rounded-lg bg-black border border-purple-500 object-cover"
+          style={{ maxHeight: "300px" }}
+          onLoadStart={() => {
+            console.log("Video loading started for:", currentResponse.videoUrl);
+          }}
+          onLoadedData={() => {
+            console.log("Video data loaded successfully");
+          }}
+          onCanPlay={() => {
+            console.log("Video can play");
+          }}
+          onCanPlayThrough={() => {
+            console.log("Video can play through");
+          }}
           onError={(e) => {
             console.error("Video playback error:", e);
-            if (currentResponse.videoBlob) {
+            console.log("Current video URL:", currentResponse.videoUrl);
+            console.log("Video blob exists:", !!currentResponse.videoBlob);
+            console.log("Video element error:", e.currentTarget.error);
+
+            // If there's an error and we have a blob, try recreating the URL
+            if (
+              currentResponse.videoBlob &&
+              e.currentTarget.error?.code !== 4
+            ) {
+              console.log("Attempting to recreate video URL...");
               const newUrl = URL.createObjectURL(currentResponse.videoBlob);
-              e.currentTarget.src = newUrl;
+              console.log("New URL created:", newUrl);
+
+              // Update the response with the new URL
+              setResponses((prev) => ({
+                ...prev,
+                [currentQuestionIndex]: {
+                  ...currentResponse,
+                  videoUrl: newUrl,
+                },
+              }));
             }
+          }}
+          onPlay={() => {
+            console.log("Video started playing");
+          }}
+          onPause={() => {
+            console.log("Video paused");
           }}
         />
         <div className="flex gap-2 mt-3 flex-wrap">
           <a
-            href={displayVideoUrl}
-            download={`response-question-${currentQuestionIndex + 1}.mp4`}
+            href={currentResponse.videoUrl}
+            download={`response-question-${currentQuestionIndex + 1}.${
+              currentResponse.videoBlob?.type.includes("mp4") ? "mp4" : "webm"
+            }`}
             className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
           >
             <Download className="w-3 h-3 mr-1" />
@@ -301,6 +377,27 @@ const Interview: React.FC<InterviewProps> = ({
           >
             <Trash2 className="w-3 h-3 mr-1" />
             Delete
+          </button>
+          {/* Manual play button for troubleshooting */}
+          <button
+            onClick={(e) => {
+              const video =
+                e.currentTarget.parentElement?.parentElement?.querySelector(
+                  "video"
+                ) as HTMLVideoElement;
+              if (video) {
+                video.currentTime = 0;
+                video.play().catch((err) => {
+                  console.error("Manual play failed:", err);
+                  alert(
+                    "Unable to play video. This might be due to browser restrictions or video format issues."
+                  );
+                });
+              }
+            }}
+            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
+          >
+            ▶ Play
           </button>
         </div>
       </div>
@@ -322,7 +419,8 @@ const Interview: React.FC<InterviewProps> = ({
           autoPlay
           muted
           playsInline
-          className="rounded-lg bg-black border border-purple-500 object-cover"
+          className="w-full rounded-lg bg-black border border-purple-500 object-cover"
+          style={{ maxHeight: "300px" }}
         />
         <div className="bg-gray-700 flex gap-2 mt-3 rounded-full">
           {!isRecording ? (
