@@ -276,13 +276,13 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-auto mx-auto  bg-gray-800 rounded-2xl p-8 border border-gray-400 shadow-2xl">
+      <div className="mx-auto  bg-gray-800 rounded-2xl p-8 border border-gray-400 shadow-2xl w-full">
         {/* Header */}
-        <div className="text-center mb-16">
+        <div className="text-center mb-16 mt-14">
           <h1 className="text-6xl font-bold text-white mb-4">
             Welcome to Podium
           </h1>
-          <p className="text-xl text-gray-300">Practice with AI-powered mock interviews tailored to your aspiring role and company!</p>
+          <p className="text-xl text-gray-300">Practice with AI-powered mock interviews tailored to your dream role and company!</p>
         </div>
 
         {/* Companies Section */}
