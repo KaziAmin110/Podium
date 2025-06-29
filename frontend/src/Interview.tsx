@@ -520,14 +520,14 @@ const Interview: React.FC<InterviewProps> = ({
             Question {currentQuestionIndex + 1}
           </h2>
           <div className="flex-1 flex items-center">
-            <p className="text-white text-lg leading-relaxed">
+            <p className="text-white text-2xl leading-relaxed">
               {currentQuestion}
             </p>
           </div>
         </div>
 
         {/* Response Column */}
-        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 lg:flex-1 flex flex-col min-h-[400px]">
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 lg:flex-1 flex flex-col min-h-[400px] justify-center">
           {currentResponse
             ? renderVideoResponse()
             : permission && stream
@@ -588,7 +588,13 @@ const Interview: React.FC<InterviewProps> = ({
         ) : (
           <button
             onClick={handleNextQuestion}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center"
+            className={`bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center ${
+              currentQuestionIndex >= maxUnlockedQuestion &&
+              "cursor-not-allowed"
+            }`}
+            disabled={
+              currentQuestionIndex >= maxUnlockedQuestion || isSubmitting
+            }
           >
             Next
             <SkipForward className="w-4 h-4 ml-2" />
