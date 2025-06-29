@@ -12,8 +12,11 @@ appRoutes.get("/test", (req, res) => {
 });
 
 function cleanJSONResponse(text) {
-  return text.replace(/```json|```/g, "").trim();
+  return text
+    .replace(/```json|```/g, '')
+    .trim();
 }
+
 
 async function generateInterviewQuestions(positionTitle, company, experience) {
   const prompt = `
@@ -28,10 +31,7 @@ Respond ONLY in this JSON format:
   "4": "Fifth question?"
 }
 `;
-  const result = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: prompt,
-  });
+  const result = await ai.models.generateContent({model: "gemini-1.5-flash", contents: prompt});
   const rawText = result.text;
   const cleanedText = cleanJSONResponse(rawText);
 
@@ -42,18 +42,13 @@ Respond ONLY in this JSON format:
 appRoutes.post("/generate-questions", async (req, res) => {
   const { positionTitle, company, experience } = req.body;
   if (!positionTitle || !company || !experience) {
-    return res
-      .status(400)
-      .json({ error: "positionTitle, company, and experience are required" });
+    return res.status(400).json({ error: "positionTitle, company, and experience are required" });
   }
 
-  const questions = await generateInterviewQuestions(
-    positionTitle,
-    company,
-    experience
-  );
+  const questions = await generateInterviewQuestions(positionTitle, company, experience);
   res.json(questions);
 });
+
 
 //Generate reviews
 const upload = multer();
@@ -63,108 +58,62 @@ import multer from "multer";
 import * as fs from "node:fs";
 import path from "path";
 
-appRoutes.post(
-  "/generate-reviews",
-  upload.single("video"),
-  async (req, res) => {
-    const question = req.body.question;
-    const company = req.body.company;
-    const position = req.body.positionTitle;
-    const experience = req.body.experience;
-    const tempPath = path.resolve("./temp/video.mp4");
 
-    await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
-    await fs.promises.writeFile(tempPath, req.file.buffer);
+appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => {
+  const question = req.body.question;
+  const company = req.body.company;
+  const position = req.body.positionTitle;
+  const experience = req.body.experience;
+  const tempPath = path.resolve("./temp/video.mp4");
 
-    const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
+  await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
+  await fs.promises.writeFile(tempPath, req.file.buffer);
 
-    const contents = [
-      {
-        inlineData: {
-          mimeType: "video/mp4",
-          data: base64VideoFile,
-        },
+  const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
+
+  const contents = [
+    {
+      inlineData: {
+        mimeType: "video/mp4",
+        data: base64VideoFile,
       },
-      {
-        text: `
-You are a strict evaluation assistant. You must ONLY return a valid JSON object with no extra explanation or commentary.
+    },
+    {
+      text: `
+Review the candidate's answer to this interview question harshly and score it from 1 to 10.
+You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
+Tell them their faults but also tell them how to improve in overall feedback
 
-Review the candidate’s answer to this interview question harshly and score it from 1 to 10.
+Provide a JSON output with these keys:
+- score (int)
+- strengths (list of strings)
+- weaknesses (list of strings)
+- overall_feedback (string)
 
-Speak directly to the user in second person ("you"). Focus on their knowledge, communication, and body language.
+Do not add any extra formatting or text outside the JSON.
 
-⚠️ Return only this valid JSON format, with nothing else:
-{
-  "score": int,
-  "strengths": [string],
-  "weaknesses": [string],
-  "overall_feedback": string
-}
+The company is "${company}".
+The position is "${position}".
+The experience level is "${experience}".
 
-Company: "${company}"
-Position: "${positionTitle}"
-Experience: "${experience}"
-Question: "${question}"
+Question: "${question}".
 `
-      }
-    ];
-
-    try {
-      const result = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents,
-      });
-      const parsed = JSON.parse(cleanJSONResponse(result.text));
-      feedbacks.push({ question, ...parsed });
-    } catch (err) {
-      console.error(`❌ Failed to analyze question ${i}:`, err);
-      feedbacks.push({ question, error: "Analysis failed" });
     }
+  ];
 
-    await fs.promises.unlink(tempPath).catch(() => {});
-  }
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents,
+  });
 
-  // --- Step 2: Generate summary ---
-  const summaryPrompt = `
-You are an interview coach. Based on the following feedbacks, summarize the user's overall performance.
+  await fs.promises.unlink(tempPath);
 
-Return this JSON:
-{
-  "summary": string,
-  "tips": [string],
-  "score": int
-}
+  const reviewJson = JSON.parse(cleanJSONResponse(response.text));
 
-${feedbacks
-  .map((fb, i) => `Q${i + 1}: ${fb.question}\nFeedback: ${fb.overall_feedback ?? "Skipped"}`)
-  .join("\n\n")}
-`;
-
-  try {
-    const result = await ai.models.generateContent({
-      model: "gemini-1.5-pro",
-      contents: summaryPrompt,
-    });
-
-    const summaryData = JSON.parse(cleanJSONResponse(result.text));
-
-    // --- Step 3: Store in Supabase ---
-    const { error } = await supabase.from("interview_feedbacks").insert({
-      user_id: userId,
-      position: positionTitle,
-      company,
-      experience,
-      questions,
-      feedbacks,
-      summary: summaryData.summary,
-      tips: summaryData.tips,
-      final_score: summaryData.score
-    });
-
-    if (error) throw error;
-
-    res.json({ review: reviewJson });
-  }
+  res.json({ review: reviewJson });
 });
+
+
+
 
 export default appRoutes;
