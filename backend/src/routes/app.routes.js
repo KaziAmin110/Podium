@@ -1,118 +1,193 @@
 import { Router } from "express";
 import { GoogleGenAI } from "@google/genai";
+import multer from "multer";
 import dotenv from "dotenv";
+import * as fs from "node:fs";
+import path from "path";
+import { supabase } from "../utils/supabaseClient.js";
 
 dotenv.config();
 
 const appRoutes = Router();
 const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
+const upload = multer();
+const TEMP_DIR = "./temp";
 
-appRoutes.get("/test", (req, res) => {
-  res.send("Hello from the App API!");
-});
-
+// --- Helpers ---
 function cleanJSONResponse(text) {
-  return text
-    .replace(/```json|```/g, '')
-    .trim();
+  return text.replace(/```json|```/g, "").trim();
 }
 
+async function ensureTempDir() {
+  await fs.promises.mkdir(TEMP_DIR, { recursive: true });
+}
 
-async function generateInterviewQuestions(positionTitle, company, experience) {
+async function saveTempFile(fileBuffer, filename) {
+  const filePath = path.join(TEMP_DIR, filename);
+  await fs.promises.writeFile(filePath, fileBuffer);
+  return filePath;
+}
+
+// --- Test Route ---
+appRoutes.get("/test", (req, res) => {
+  res.send("Hello from DevPodium backend!");
+});
+
+// --- 1. Generate Interview Questions ---
+appRoutes.post("/generate-questions", async (req, res) => {
+  const {
+    userId,
+    positionTitle = "unknown",
+    company = "unknown",
+    experience = "unknown",
+    count = 5
+  } = req.body;
+
   const prompt = `
-You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
-If the company listed is small and unknown, ask more general questions. If the company is large, ask company-specific questions and general questions.
+You are an interview assistant. Generate "${count}" interview questions for a candidate applying for "${positionTitle}" at "${company}" with an experience level of "${experience}".
 Respond ONLY in this JSON format:
 {
-  "0": "First question?",
-  "1": "Second question?",
-  "2": "Third question?",
-  "3": "Fourth question?",
-  "4": "Fifth question?"
+  "0": "Question 1?",
+  "1": "Question 2?",
+  ...
 }
 `;
-  const result = await ai.models.generateContent({model: "gemini-1.5-flash", contents: prompt});
-  const rawText = result.text;
-  const cleanedText = cleanJSONResponse(rawText);
 
-  const parsed = JSON.parse(cleanedText);
-  return parsed;
-}
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: prompt,
+    });
 
-appRoutes.post("/generate-questions", async (req, res) => {
-  const { positionTitle, company, experience } = req.body;
-  if (!positionTitle || !company || !experience) {
-    return res.status(400).json({ error: "positionTitle, company, and experience are required" });
+    const parsed = JSON.parse(cleanJSONResponse(response.text));
+    const questions = Object.values(parsed);
+
+    res.json({ questions });
+  } catch (err) {
+    console.error("❌ Question generation failed:", err);
+    res.status(500).json({ error: "Failed to generate questions", detail: err.message });
+  }
+});
+
+// --- 2. Submit All Reviews + Summary ---
+appRoutes.post("/submit-all-reviews", upload.array("videos"), async (req, res) => {
+  const {
+    userId,
+    positionTitle = "unknown",
+    company = "unknown",
+    experience = "unknown",
+    questions: rawQuestions
+  } = req.body;
+
+  const questions = JSON.parse(rawQuestions);
+  const files = req.files;
+
+  if (!questions || !files || files.length !== questions.length) {
+    return res.status(400).json({ error: "Mismatch between questions and video files" });
   }
 
-  const questions = await generateInterviewQuestions(positionTitle, company, experience);
-  res.json(questions);
-});
+  await ensureTempDir();
 
+  const feedbacks = [];
 
-//Generate reviews
-const upload = multer();
-const model = "gemini-1.5-flash";
+  // --- Step 1: Generate feedback for each question ---
+  for (let i = 0; i < questions.length; i++) {
+    const question = questions[i];
+    const file = files[i];
+    const tempPath = await saveTempFile(file.buffer, `video-${i}.mp4`);
+    const base64 = fs.readFileSync(tempPath, { encoding: "base64" });
 
-import multer from "multer";
-import * as fs from "node:fs";
-import path from "path";
-
-
-appRoutes.post("/generate-reviews", upload.single("video"), async (req, res) => {
-  const question = req.body.question;
-  const company = req.body.company;
-  const position = req.body.positionTitle;
-  const experience = req.body.experience;
-  const tempPath = path.resolve("./temp/video.mp4");
-
-  await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
-  await fs.promises.writeFile(tempPath, req.file.buffer);
-
-  const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
-
-  const contents = [
-    {
-      inlineData: {
-        mimeType: "video/mp4",
-        data: base64VideoFile,
+    const contents = [
+      {
+        inlineData: {
+          mimeType: "video/mp4",
+          data: base64,
+        },
       },
-    },
-    {
-      text: `
+      {
+        text: `
 Review the candidate's answer to this interview question harshly and score it from 1 to 10.
-You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
-Tell them their faults but also tell them how to improve in overall feedback
+You are also responding to the user; address them as "you". Focus on knowledge, communication, and body language.
+Provide JSON:
+{
+  "score": int,
+  "strengths": [list],
+  "weaknesses": [list],
+  "overall_feedback": string
+}
 
-Provide a JSON output with these keys:
-- score (int)
-- strengths (list of strings)
-- weaknesses (list of strings)
-- overall_feedback (string)
-
-Do not add any extra formatting or text outside the JSON.
-
-The company is "${company}".
-The position is "${position}".
-The experience level is "${experience}".
-
-Question: "${question}".
+Company: "${company}"
+Position: "${positionTitle}"
+Experience: "${experience}"
+Question: "${question}"
 `
+      }
+    ];
+
+    try {
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+      });
+      const parsed = JSON.parse(cleanJSONResponse(result.text));
+      feedbacks.push({ question, ...parsed });
+    } catch (err) {
+      console.error(`❌ Failed to analyze question ${i}:`, err);
+      feedbacks.push({ question, error: "Analysis failed" });
     }
-  ];
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents,
-  });
+    await fs.promises.unlink(tempPath).catch(() => {});
+  }
 
-  await fs.promises.unlink(tempPath);
+  // --- Step 2: Generate summary ---
+  const summaryPrompt = `
+You are an interview coach. Based on the following feedbacks, summarize the user's overall performance.
 
-  const reviewJson = JSON.parse(cleanJSONResponse(response.text));
+Return this JSON:
+{
+  "summary": string,
+  "tips": [string],
+  "score": int
+}
 
-  res.json({ review: reviewJson });
+${feedbacks
+  .map((fb, i) => `Q${i + 1}: ${fb.question}\nFeedback: ${fb.overall_feedback ?? "Skipped"}`)
+  .join("\n\n")}
+`;
+
+  try {
+    const result = await ai.models.generateContent({
+      model: "gemini-1.5-pro",
+      contents: summaryPrompt,
+    });
+
+    const summaryData = JSON.parse(cleanJSONResponse(result.text));
+
+    // --- Step 3: Store in Supabase ---
+    const { error } = await supabase.from("interview_feedbacks").insert({
+      user_id: userId,
+      position: positionTitle,
+      company,
+      experience,
+      questions,
+      feedbacks,
+      summary: summaryData.summary,
+      tips: summaryData.tips,
+      final_score: summaryData.score
+    });
+
+    if (error) throw error;
+
+    res.json({
+      feedbacks,
+      summary: summaryData.summary,
+      tips: summaryData.tips,
+      score: summaryData.score
+    });
+  } catch (err) {
+    console.error("❌ Summary or DB insert failed:", err);
+    res.status(500).json({ error: "Failed to generate summary or save results", detail: err.message });
+  }
 });
-
-
 
 export default appRoutes;
