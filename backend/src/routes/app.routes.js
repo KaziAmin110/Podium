@@ -87,38 +87,84 @@ appRoutes.post(
       },
       {
         text: `
-Review the candidate's answer to this interview question harshly and score it from 1 to 10.
-You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
-Tell them their faults but also tell them how to improve in overall feedback
+You are a strict evaluation assistant. You must ONLY return a valid JSON object with no extra explanation or commentary.
 
-Provide a JSON output with these keys:
-- score (int)
-- strengths (list of strings)
-- weaknesses (list of strings)
-- overall_feedback (string)
+Review the candidate’s answer to this interview question harshly and score it from 1 to 10.
 
-Do not add any extra formatting or text outside the JSON.
+Speak directly to the user in second person ("you"). Focus on their knowledge, communication, and body language.
 
-The company is "${company}".
-The position is "${position}".
-The experience level is "${experience}".
+⚠️ Return only this valid JSON format, with nothing else:
+{
+  "score": int,
+  "strengths": [string],
+  "weaknesses": [string],
+  "overall_feedback": string
+}
 
-Question: "${question}".
-`,
-      },
+Company: "${company}"
+Position: "${positionTitle}"
+Experience: "${experience}"
+Question: "${question}"
+`
+      }
     ];
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents,
+    try {
+      const result = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents,
+      });
+      const parsed = JSON.parse(cleanJSONResponse(result.text));
+      feedbacks.push({ question, ...parsed });
+    } catch (err) {
+      console.error(`❌ Failed to analyze question ${i}:`, err);
+      feedbacks.push({ question, error: "Analysis failed" });
+    }
+
+    await fs.promises.unlink(tempPath).catch(() => {});
+  }
+
+  // --- Step 2: Generate summary ---
+  const summaryPrompt = `
+You are an interview coach. Based on the following feedbacks, summarize the user's overall performance.
+
+Return this JSON:
+{
+  "summary": string,
+  "tips": [string],
+  "score": int
+}
+
+${feedbacks
+  .map((fb, i) => `Q${i + 1}: ${fb.question}\nFeedback: ${fb.overall_feedback ?? "Skipped"}`)
+  .join("\n\n")}
+`;
+
+  try {
+    const result = await ai.models.generateContent({
+      model: "gemini-1.5-pro",
+      contents: summaryPrompt,
     });
 
-    await fs.promises.unlink(tempPath);
+    const summaryData = JSON.parse(cleanJSONResponse(result.text));
 
-    const reviewJson = JSON.parse(cleanJSONResponse(response.text));
+    // --- Step 3: Store in Supabase ---
+    const { error } = await supabase.from("interview_feedbacks").insert({
+      user_id: userId,
+      position: positionTitle,
+      company,
+      experience,
+      questions,
+      feedbacks,
+      summary: summaryData.summary,
+      tips: summaryData.tips,
+      final_score: summaryData.score
+    });
+
+    if (error) throw error;
 
     res.json({ review: reviewJson });
   }
-);
+});
 
 export default appRoutes;
