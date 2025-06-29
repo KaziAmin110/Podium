@@ -9,6 +9,7 @@ import {
   Send,
   AlertCircle,
 } from "lucide-react";
+import type { ResponseData } from "./App"; // Import the ResponseData interface
 
 // Define the interfaces
 interface InterviewData {
@@ -22,28 +23,26 @@ interface InterviewSetup {
   questionsCount: number;
 }
 
-interface ResponseData {
-  videoUrl: string;
-  videoBlob?: Blob;
-}
-
 interface InterviewProps {
   data: InterviewData | null;
   setup: InterviewSetup | null;
+  onInterviewComplete: (responses: ResponseData[]) => Promise<void>;
+  responses: Record<number, ResponseData | null>;
+  setResponses: React.Dispatch<
+    React.SetStateAction<Record<number, ResponseData | null>>
+  >;
   onExit: () => void;
-  onComplete: (responses: ResponseData[]) => void;
 }
 
 const Interview: React.FC<InterviewProps> = ({
   data,
   setup,
+  onInterviewComplete,
+  responses,
+  setResponses,
   onExit,
-  onComplete,
 }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<
-    Record<number, ResponseData | null>
-  >({});
   const [permission, setPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -99,6 +98,10 @@ const Interview: React.FC<InterviewProps> = ({
     .map(Number)
     .reduce((max, current) => Math.max(max, current), -1);
   const maxUnlockedQuestion = Math.min(highestAnswered + 1, totalQuestions - 1);
+
+  const currentQuestion = data.questions[currentQuestionIndex];
+  const currentResponse = responses[currentQuestionIndex];
+  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
   const handleExitInterview = (): void => {
     if (
@@ -266,6 +269,7 @@ const Interview: React.FC<InterviewProps> = ({
     }
   };
 
+  // Handle interview completion
   const handleCompleteInterview = async () => {
     setIsSubmitting(true);
     try {
@@ -278,13 +282,16 @@ const Interview: React.FC<InterviewProps> = ({
         } else {
           // Create empty response for missing answers
           responseArray.push({
-            videoUrl: "",
-            videoBlob: undefined,
+            videoUrl: responses[i]?.videoUrl || "",
+            videoBlob: responses[i]?.videoBlob || null,
           });
         }
       }
 
-      await onComplete(responseArray);
+      console.log("Completed interview responses:", responseArray);
+      setResponses(responseArray);
+
+      await onInterviewComplete(responseArray);
     } catch (error) {
       console.error("Error completing interview:", error);
       alert("Failed to submit interview. Please try again.");
@@ -292,10 +299,6 @@ const Interview: React.FC<InterviewProps> = ({
       setIsSubmitting(false);
     }
   };
-
-  const currentQuestion = data.questions[currentQuestionIndex];
-  const currentResponse = responses[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
   // Enhanced video response display with better sizing
   const renderVideoResponse = () => {

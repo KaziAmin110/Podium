@@ -14,8 +14,8 @@ interface InterviewSetup {
   questionsCount: number;
 }
 
-interface ResponseData {
-  videoUrl: string;
+export interface ResponseData {
+  videoUrl: string; // URL of the recorded video
   videoBlob?: Blob;
 }
 
@@ -58,6 +58,10 @@ function App() {
     questionsCount: number;
   } | null>(null);
 
+  const [responses, setResponses] = useState<
+    Record<number, ResponseData | null>
+  >({});
+
   const handleInterviewStart = (
     data: InterviewData,
     setup: InterviewSetup
@@ -74,18 +78,25 @@ function App() {
     setCurrentView("home");
   };
 
+  const handleStartNewInterview = (): void => {
+    setInterviewData(null);
+    setReportData(null);
+    setInterviewSetup(null);
+    setCurrentView("home");
+  };
+
   const submitVideoToBackend = async (
     question: string,
     videoBlob: Blob,
     questionIndex: number
-  ): Promise<any> => {
+  ): Promise<Record<string, any>> => {
     const apiUrl = "http://localhost:3000/api/app/generate-reviews";
 
     // Create FormData to match your existing API format
     const formData = new FormData();
     formData.append("question", question);
     formData.append("company", interviewSetup?.company || "");
-    formData.append("positionTitle", interviewSetup?.position || "");
+    formData.append("position", interviewSetup?.position || "");
     formData.append("experience", interviewSetup?.experience || "");
     formData.append(
       "video",
@@ -282,13 +293,6 @@ function App() {
     }
   };
 
-  const handleStartNewInterview = (): void => {
-    setInterviewData(null);
-    setReportData(null);
-    setInterviewSetup(null);
-    setCurrentView("home");
-  };
-
   return (
     <>
       {currentView === "home" && (
@@ -299,7 +303,9 @@ function App() {
           data={interviewData}
           setup={interviewSetup}
           onExit={handleBackToHome}
-          onComplete={handleInterviewComplete}
+          responses={responses}
+          setResponses={setResponses}
+          onInterviewComplete={handleInterviewComplete}
         />
       )}
       {currentView === "report" && (
