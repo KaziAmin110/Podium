@@ -238,7 +238,6 @@ const QuestionBody = ({
                       );
                       alert("Interview submitted successfully!");
                     } catch (error) {
-
                       console.error("Submission failed:", error);
                     }
                   } else {
