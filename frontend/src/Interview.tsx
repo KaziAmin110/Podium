@@ -297,176 +297,169 @@ const Interview: React.FC<InterviewProps> = ({
   const currentResponse = responses[currentQuestionIndex];
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
-  // Enhanced video response display
+  // Enhanced video response display with better sizing
   const renderVideoResponse = () => {
     if (!currentResponse) return null;
 
     return (
-      <div className="bg-gray-700 rounded-lg p-3">
-        <h4 className="text-white font-medium mb-2 flex items-center text-xl">
-          <Video className="w-8 h-8 mr-2 text-purple-400" />
-          Your Response
-        </h4>
-        <video
-          key={currentResponse.videoUrl} // Force re-render when URL changes
-          src={currentResponse.videoUrl}
-          controls
-          playsInline
-          preload="auto"
-          muted={false}
-          className="rounded-lg bg-black border border-purple-500 object-cover"
-          style={{ maxHeight: "300px" }}
-          onLoadStart={() => {
-            console.log("Video loading started for:", currentResponse.videoUrl);
-          }}
-          onLoadedData={() => {
-            console.log("Video data loaded successfully");
-          }}
-          onCanPlay={() => {
-            console.log("Video can play");
-          }}
-          onCanPlayThrough={() => {
-            console.log("Video can play through");
-          }}
-          onError={(e) => {
-            console.error("Video playback error:", e);
-            console.log("Current video URL:", currentResponse.videoUrl);
-            console.log("Video blob exists:", !!currentResponse.videoBlob);
-            console.log("Video element error:", e.currentTarget.error);
+      <div className="h-full flex flex-col">
+        <div className="flex items-center mb-4">
+          <Video className="w-6 h-6 mr-2 text-purple-400" />
+          <h4 className="text-white font-medium text-lg">Your Response</h4>
+        </div>
 
-            // If there's an error and we have a blob, try recreating the URL
-            if (
-              currentResponse.videoBlob &&
-              e.currentTarget.error?.code !== 4
-            ) {
-              console.log("Attempting to recreate video URL...");
-              const newUrl = URL.createObjectURL(currentResponse.videoBlob);
-              console.log("New URL created:", newUrl);
+        {/* Video container with proper aspect ratio and sizing */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="relative flex-1 bg-black rounded-lg overflow-hidden border-2 border-purple-500/30 shadow-lg">
+            <video
+              key={currentResponse.videoUrl}
+              src={currentResponse.videoUrl}
+              controls
+              playsInline
+              preload="auto"
+              muted={false}
+              className="w-full h-full object-contain"
+              style={{ minHeight: "200px" }}
+              onError={(e) => {
+                console.error("Video playback error:", e);
+                console.log("Current video URL:", currentResponse.videoUrl);
+                console.log("Video blob exists:", !!currentResponse.videoBlob);
+                console.log("Video element error:", e.currentTarget.error);
 
-              // Update the response with the new URL
-              setResponses((prev) => ({
-                ...prev,
-                [currentQuestionIndex]: {
-                  ...currentResponse,
-                  videoUrl: newUrl,
-                },
-              }));
-            }
-          }}
-          onPlay={() => {
-            console.log("Video started playing");
-          }}
-          onPause={() => {
-            console.log("Video paused");
-          }}
-        />
-        <div className="flex gap-2 mt-3 flex-wrap">
-          <a
-            href={currentResponse.videoUrl}
-            download={`response-question-${currentQuestionIndex + 1}.${
-              currentResponse.videoBlob?.type.includes("mp4") ? "mp4" : "webm"
-            }`}
-            className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
-          >
-            <Download className="w-3 h-3 mr-1" />
-            Download
-          </a>
-          <button
-            onClick={handleReset}
-            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
-          >
-            <Trash2 className="w-3 h-3 mr-1" />
-            Delete
-          </button>
-          {/* Manual play button for troubleshooting */}
-          <button
-            onClick={(e) => {
-              const video =
-                e.currentTarget.parentElement?.parentElement?.querySelector(
-                  "video"
-                ) as HTMLVideoElement;
-              if (video) {
-                video.currentTime = 0;
-                video.play().catch((err) => {
-                  console.error("Manual play failed:", err);
-                  alert(
-                    "Unable to play video. This might be due to browser restrictions or video format issues."
-                  );
-                });
-              }
-            }}
-            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
-          >
-            ▶ Play
-          </button>
+                if (
+                  currentResponse.videoBlob &&
+                  e.currentTarget.error?.code !== 4
+                ) {
+                  console.log("Attempting to recreate video URL...");
+                  const newUrl = URL.createObjectURL(currentResponse.videoBlob);
+                  console.log("New URL created:", newUrl);
+
+                  setResponses((prev) => ({
+                    ...prev,
+                    [currentQuestionIndex]: {
+                      ...currentResponse,
+                      videoUrl: newUrl,
+                    },
+                  }));
+                }
+              }}
+            />
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex gap-2 mt-4 flex-wrap">
+            <a
+              href={currentResponse.videoUrl}
+              download={`response-question-${currentQuestionIndex + 1}.${
+                currentResponse.videoBlob?.type.includes("mp4") ? "mp4" : "webm"
+              }`}
+              className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm flex items-center transition-colors shadow-md"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </a>
+            <button
+              onClick={handleReset}
+              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm flex items-center transition-colors shadow-md"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     );
   };
 
-  // Recording interface
+  // Recording interface with better sizing
   const renderRecordingInterface = () => {
     if (!permission || !stream) return null;
 
     return (
-      <div className="bg-gray-700 flex flex-col  p-5 rounded-lg">
-        <h4 className="text-white font-medium mb-2 flex items-center text-xl">
-          <Camera className="w-8 h-8 mr-2 text-purple-400" />
-          {isRecording ? "Recording..." : "Camera Ready"}
-        </h4>
-        <video
-          ref={liveVideoRef}
-          autoPlay
-          muted
-          playsInline
-          className="w-full rounded-lg bg-black border border-purple-500 object-cover"
-          style={{ maxHeight: "300px" }}
-        />
-        <div className="bg-gray-700 flex gap-2 mt-3 rounded-full">
-          {!isRecording ? (
-            <button
-              onClick={startRecording}
-              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm flex items-center transition-colors mt-5"
-            >
-              <Camera className="w-4 h-4 mr-1" />
-              Start Recording
-            </button>
-          ) : (
-            <button
-              onClick={stopRecording}
-              className="bg-red-600 hover:bg-red-800 text-white px-3 py-2 rounded text-sm flex items-center animate-pulse mt-5"
-            >
-              <div className="w-3 h-3 mr-1 bg-white rounded-full animate-pulse"></div>
-              Stop Recording
-            </button>
+      <div className="h-full flex flex-col">
+        <div className="flex items-center mb-4">
+          <Camera className="w-6 h-6 mr-2 text-purple-400" />
+          <h4 className="text-white font-medium text-lg">
+            {isRecording ? "Recording..." : "Camera Ready"}
+          </h4>
+          {isRecording && (
+            <div className="ml-2 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
           )}
+        </div>
+
+        {/* Video preview container */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="relative flex-1 bg-black rounded-lg overflow-hidden border-2 border-purple-500/50 shadow-lg">
+            <video
+              ref={liveVideoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover"
+              style={{ minHeight: "200px" }}
+            />
+            {isRecording && (
+              <div className="absolute top-4 right-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center">
+                <div className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></div>
+                REC
+              </div>
+            )}
+          </div>
+
+          {/* Recording controls */}
+          <div className="flex justify-center mt-4">
+            {!isRecording ? (
+              <button
+                onClick={startRecording}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors shadow-lg"
+              >
+                <div className="w-4 h-4 mr-2 bg-white rounded-full"></div>
+                Start Recording
+              </button>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="bg-red-600 hover:bg-red-800 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors shadow-lg"
+              >
+                <div className="w-4 h-4 mr-2 bg-white"></div>
+                Stop Recording
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
   };
 
-  // Initial choice interface
+  // Initial choice interface with better layout
   const renderInitialChoice = () => (
-    <div className="rounded-lg p-3 self-center flex flex-col gap-4">
-      <h4 className="text-white font-medium mb-2 text-xl">
-        Choose response method:
-      </h4>
-      <div className="flex gap-2 flex-wrap">
+    <div className="h-full flex flex-col items-center justify-center">
+      <div className="text-center mb-8">
+        <h4 className="text-white font-medium text-xl mb-2">
+          Choose Response Method
+        </h4>
+        <p className="text-gray-400 text-sm">
+          Record a new video or upload an existing one
+        </p>
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
         <button
           onClick={getCameraPermission}
-          className="flex-1 bg-purple-600 flex items-center justify-center hover:bg-purple-700 text-white px-3 py-2 rounded text-sm transition-colors min-w-fit"
+          className="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-6 py-4 rounded-lg font-medium flex items-center justify-center transition-colors shadow-lg group"
         >
-          <Camera className="w-4 h-4 mr-1" />
-          Record
+          <Camera className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+          Record Video
         </button>
         <button
           onClick={handleUploadClick}
-          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded flex items-center justify-center transition-colors text-sm min-w-fit"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-4 rounded-lg font-medium flex items-center justify-center transition-colors shadow-lg group"
         >
-          <Upload className="w-4 h-4 mr-1" />
-          Upload
+          <Upload className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+          Upload Video
         </button>
       </div>
+
       <input
         type="file"
         ref={fileInputRef}
@@ -478,11 +471,11 @@ const Interview: React.FC<InterviewProps> = ({
   );
 
   return (
-    <div className="min-h-screen bg-gray-900 p-10 max-h-screen overflow-y-auto flex flex-col">
-      {/* Compact Header */}
-      <div className="flex justify-between items-start mb-3">
+    <div className="min-h-screen bg-gray-900 p-4 lg:p-8 flex flex-col">
+      {/* Header */}
+      <div className="flex justify-between items-start mb-6">
         <div>
-          <h1 className="text-xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-white">
             {setup?.company} Mock Interview
           </h1>
           <div className="flex gap-4 text-gray-400 text-sm mt-1">
@@ -492,80 +485,78 @@ const Interview: React.FC<InterviewProps> = ({
         </div>
         <button
           onClick={handleExitInterview}
-          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+          className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
         >
-          Exit
+          Exit Interview
         </button>
       </div>
 
-      <div className="flex flex-col gap-2 justify-center mt-4">
-        {/* Compact Progress */}
-        <div className="mb-4">
-          <div className="flex justify-between items-center mb-1">
-            <p className="text-gray-300 text-sm">
-              Question {currentQuestionIndex + 1} of {totalQuestions}
-            </p>
-            <p className="text-xs text-gray-400">
-              {Object.values(responses).filter((r) => r !== null).length}{" "}
-              completed
-            </p>
-          </div>
-          <div className="bg-gray-700 rounded-full h-1.5">
-            <div
-              className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
-              style={{
-                width: `${
-                  ((currentQuestionIndex + 1) / totalQuestions) * 100
-                }%`,
-              }}
-            ></div>
-          </div>
+      {/* Progress */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <p className="text-gray-300">
+            Question {currentQuestionIndex + 1} of {totalQuestions}
+          </p>
+          <p className="text-sm text-gray-400">
+            {Object.values(responses).filter((r) => r !== null).length}{" "}
+            completed
+          </p>
         </div>
-
-        {/* Main Content in Two Columns */}
-        <div className="flex flex-col gap-10 mb-4 mt-5 md:flex-row md:gap-5 md:justify-between md:min-h-150">
-          {/* Question Column */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:basis-1/2">
-            <h2 className="text-2xl font-semibold text-purple-300 mb-2">
-              Question {currentQuestionIndex + 1}
-            </h2>
-            <p className="text-white text-xl mb-3 leading-relaxed">
-              {currentQuestion}
-            </p>
-          </div>
-
-          {/* Response Column */}
-          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:basis-1/2 flex justify-center">
-            {currentResponse
-              ? renderVideoResponse()
-              : permission && stream
-              ? renderRecordingInterface()
-              : renderInitialChoice()}
-          </div>
+        <div className="bg-gray-700 rounded-full h-2">
+          <div
+            className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+            style={{
+              width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%`,
+            }}
+          ></div>
         </div>
       </div>
 
-      {/* Compact Navigation */}
-      <div className="flex justify-between items-center mb-3">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-0">
+        {/* Question Column */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 lg:flex-1 flex flex-col">
+          <h2 className="text-2xl font-semibold text-purple-300 mb-4 underline">
+            Question {currentQuestionIndex + 1}
+          </h2>
+          <div className="flex-1 flex items-center">
+            <p className="text-white text-lg leading-relaxed">
+              {currentQuestion}
+            </p>
+          </div>
+        </div>
+
+        {/* Response Column */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 lg:flex-1 flex flex-col min-h-[400px]">
+          {currentResponse
+            ? renderVideoResponse()
+            : permission && stream
+            ? renderRecordingInterface()
+            : renderInitialChoice()}
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div className="flex justify-between items-center mt-6 gap-4">
         <button
           onClick={handlePrevQuestion}
           disabled={currentQuestionIndex === 0}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center mt-10"
+          className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg transition-colors"
         >
           Previous
         </button>
 
-        <div className="flex gap-2 flex-wrap justify-center mt-10">
+        <div className="flex gap-2 justify-center">
           {data.questions.map((_, index) => (
             <button
               key={index}
               onClick={() => handleNavClick(index)}
               disabled={index > maxUnlockedQuestion}
-              className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+              className={`w-10 h-10 rounded-full font-medium transition-colors ${
                 index === currentQuestionIndex
-                  ? "bg-purple-600 text-white"
+                  ? "bg-purple-600 text-white shadow-lg"
                   : responses[index]
-                  ? "bg-green-600 text-white"
+                  ? "bg-green-600 text-white shadow-md"
                   : index <= maxUnlockedQuestion
                   ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
                   : "bg-gray-700 text-gray-500 cursor-not-allowed"
@@ -580,27 +571,27 @@ const Interview: React.FC<InterviewProps> = ({
           <button
             onClick={handleCompleteInterview}
             disabled={isSubmitting}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors font-semibold flex items-center mt-10"
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors font-semibold flex items-center"
           >
             {isSubmitting ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Submitting...
               </>
             ) : (
               <>
-                <Send className="w-4 h-4 mr-1" />
-                Submit
+                <Send className="w-4 h-4 mr-2" />
+                Submit Interview
               </>
             )}
           </button>
         ) : (
           <button
             onClick={handleNextQuestion}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center mt-10"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg transition-colors flex items-center"
           >
             Next
-            <SkipForward className="w-3 h-3 ml-1" />
+            <SkipForward className="w-4 h-4 ml-2" />
           </button>
         )}
       </div>
