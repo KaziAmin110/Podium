@@ -276,7 +276,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({ onInterviewStart }) =
 
   return (
     <div className="min-h-screen bg-gray-900 p-6">
-      <div className="mx-auto  bg-gray-800 rounded-2xl p-8 border border-gray-400 shadow-2xl w-full">
+      <div className="mx-auto  bg-gray-800 rounded-2xl p-8 border border-gray-600 shadow-2xl w-full">
         {/* Header */}
         <div className="text-center mb-16 mt-14">
           <h1 className="text-6xl font-bold text-white mb-4">

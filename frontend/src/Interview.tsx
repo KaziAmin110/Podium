@@ -1,9 +1,25 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Video, Camera, Download, Trash2, SkipForward, Send, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from "react";
+import {
+  Upload,
+  Video,
+  Camera,
+  Download,
+  Trash2,
+  SkipForward,
+  Send,
+  AlertCircle,
+} from "lucide-react";
 
 // Define the interfaces
 interface InterviewData {
   questions: string[];
+}
+
+interface InterviewSetup {
+  company: string;
+  position: string;
+  experience: string;
+  questionsCount: number;
 }
 
 interface ResponseData {
@@ -13,13 +29,21 @@ interface ResponseData {
 
 interface InterviewProps {
   data: InterviewData | null;
+  setup: InterviewSetup | null;
   onExit: () => void;
   onComplete: (responses: ResponseData[]) => void;
 }
 
-const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
+const Interview: React.FC<InterviewProps> = ({
+  data,
+  setup,
+  onExit,
+  onComplete,
+}) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [responses, setResponses] = useState<Record<number, ResponseData | null>>({});
+  const [responses, setResponses] = useState<
+    Record<number, ResponseData | null>
+  >({});
   const [permission, setPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -30,16 +54,37 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Cleanup effects
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      // Cleanup video URLs on unmount
+      Object.values(responses).forEach((response) => {
+        if (response?.videoUrl) {
+          URL.revokeObjectURL(response.videoUrl);
+        }
+      });
+    };
+  }, [stream, responses]);
+
+  useEffect(() => {
+    if (permission && stream && liveVideoRef.current) {
+      liveVideoRef.current.srcObject = stream;
+    }
+  }, [permission, stream]);
+
   // Handle case where no interview data exists
   if (!data || !data.questions || data.questions.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-900 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 p-4 flex items-center justify-center">
         <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl text-white mb-4">No interview data found</h1>
-          <button 
+          <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
+          <h1 className="text-xl text-white mb-3">No interview data found</h1>
+          <button
             onClick={onExit}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
           >
             Return to Home
           </button>
@@ -55,35 +100,21 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
     .reduce((max, current) => Math.max(max, current), -1);
   const maxUnlockedQuestion = Math.min(highestAnswered + 1, totalQuestions - 1);
 
-  // Cleanup effects
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-      // Cleanup video URLs on unmount
-      Object.values(responses).forEach(response => {
-        if (response?.videoUrl) {
-          URL.revokeObjectURL(response.videoUrl);
-        }
-      });
-    };
-  }, [stream]);
-
-  useEffect(() => {
-    if (permission && stream && liveVideoRef.current) {
-      liveVideoRef.current.srcObject = stream;
-    }
-  }, [permission, stream]);
-
   const handleExitInterview = (): void => {
-    if (window.confirm('Are you sure you want to exit the interview? Your progress will be lost.')) {
+    if (
+      window.confirm(
+        "Are you sure you want to exit the interview? Your progress will be lost."
+      )
+    ) {
       onExit();
     }
   };
 
   const getCameraPermission = async () => {
-    if ("mediaDevices" in navigator && "getUserMedia" in navigator.mediaDevices) {
+    if (
+      "mediaDevices" in navigator &&
+      "getUserMedia" in navigator.mediaDevices
+    ) {
       try {
         const videoStream = await navigator.mediaDevices.getUserMedia({
           audio: true,
@@ -93,7 +124,9 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
         setStream(videoStream);
       } catch (err) {
         console.error("Error accessing camera and microphone:", err);
-        alert("Unable to access camera and microphone. Please ensure you've granted permission and try again.");
+        alert(
+          "Unable to access camera and microphone. Please ensure you've granted permission and try again."
+        );
       }
     } else {
       alert("Media API not supported in your browser.");
@@ -129,7 +162,7 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
         videoBlob: videoBlob,
       };
 
-      setResponses(prev => {
+      setResponses((prev) => {
         const oldResponse = prev[currentQuestionIndex];
         if (oldResponse?.videoUrl) {
           URL.revokeObjectURL(oldResponse.videoUrl);
@@ -155,7 +188,7 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
         videoBlob: file,
       };
 
-      setResponses(prev => {
+      setResponses((prev) => {
         const oldResponse = prev[currentQuestionIndex];
         if (oldResponse?.videoUrl) {
           URL.revokeObjectURL(oldResponse.videoUrl);
@@ -170,7 +203,7 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
     if (oldResponse?.videoUrl) {
       URL.revokeObjectURL(oldResponse.videoUrl);
     }
-    setResponses(prev => ({ ...prev, [currentQuestionIndex]: null }));
+    setResponses((prev) => ({ ...prev, [currentQuestionIndex]: null }));
   };
 
   const handleNextQuestion = () => {
@@ -203,16 +236,16 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
         } else {
           // Create empty response for missing answers
           responseArray.push({
-            videoUrl: '',
-            videoBlob: undefined
+            videoUrl: "",
+            videoBlob: undefined,
           });
         }
       }
-      
+
       await onComplete(responseArray);
     } catch (error) {
-      console.error('Error completing interview:', error);
-      alert('Failed to submit interview. Please try again.');
+      console.error("Error completing interview:", error);
+      alert("Failed to submit interview. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -227,14 +260,17 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
     if (!currentResponse) return null;
 
     let displayVideoUrl = currentResponse.videoUrl;
-    if (currentResponse.videoBlob && (!displayVideoUrl || !displayVideoUrl.startsWith("blob:"))) {
+    if (
+      currentResponse.videoBlob &&
+      (!displayVideoUrl || !displayVideoUrl.startsWith("blob:"))
+    ) {
       displayVideoUrl = URL.createObjectURL(currentResponse.videoBlob);
     }
 
     return (
-      <div className="bg-gray-700 rounded-lg p-4">
-        <h4 className="text-white font-medium mb-3 flex items-center">
-          <Video className="w-5 h-5 mr-2 text-purple-400" />
+      <div className="bg-gray-700 rounded-lg p-3">
+        <h4 className="text-white font-medium mb-2 flex items-center text-sm">
+          <Video className="w-4 h-4 mr-2 text-purple-400" />
           Your Response
         </h4>
         <video
@@ -250,20 +286,20 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
             }
           }}
         />
-        <div className="flex gap-3 mt-4 flex-wrap">
+        <div className="flex gap-2 mt-3 flex-wrap">
           <a
             href={displayVideoUrl}
             download={`response-question-${currentQuestionIndex + 1}.mp4`}
-            className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+            className="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="w-3 h-3 mr-1" />
             Download
           </a>
           <button
             onClick={handleReset}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm flex items-center transition-colors"
           >
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className="w-3 h-3 mr-1" />
             Delete
           </button>
         </div>
@@ -276,33 +312,33 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
     if (!permission || !stream) return null;
 
     return (
-      <div className="bg-gray-700 rounded-lg p-6">
-        <h4 className="text-white font-medium mb-4 flex items-center">
-          <Camera className="w-5 h-5 mr-2 text-purple-400" />
-          {isRecording ? 'Recording in Progress...' : 'Camera Ready'}
+      <div className="flex flex-col bg-gray-700 rounded-lg p-5 md:">
+        <h4 className="text-white font-medium mb-2 flex items-center text-sm">
+          <Camera className="w-4 h-4 mr-2 text-purple-400" />
+          {isRecording ? "Recording..." : "Camera Ready"}
         </h4>
         <video
           ref={liveVideoRef}
           autoPlay
           muted
           playsInline
-          className="w-full rounded-lg bg-black border-2 border-purple-500"
+          className="rounded-lg bg-black border border-purple-500 object-cover "
         />
-        <div className="flex gap-3 mt-4">
+        <div className="flex gap-2 mt-3">
           {!isRecording ? (
             <button
               onClick={startRecording}
-              className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg flex items-center transition-colors"
+              className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm flex items-center transition-colors mt-5"
             >
-              <Camera className="w-5 h-5 mr-2" />
+              <Camera className="w-4 h-4 mr-1" />
               Start Recording
             </button>
           ) : (
             <button
               onClick={stopRecording}
-              className="bg-red-600 hover:bg-red-800 text-white px-6 py-3 rounded-lg flex items-center animate-pulse"
+              className="bg-red-600 hover:bg-red-800 text-white px-3 py-2 rounded text-sm flex items-center animate-pulse mt-5"
             >
-              <div className="w-5 h-5 mr-2 bg-white rounded-full animate-pulse"></div>
+              <div className="w-3 h-3 mr-1 bg-white rounded-full animate-pulse"></div>
               Stop Recording
             </button>
           )}
@@ -313,22 +349,24 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
 
   // Initial choice interface
   const renderInitialChoice = () => (
-    <div className="bg-gray-700 rounded-lg p-6">
-      <h4 className="text-white font-medium mb-4">Choose how to respond:</h4>
-      <div className="flex gap-4 flex-wrap">
+    <div className="bg-gray-700 rounded-lg p-3">
+      <h4 className="text-white font-medium mb-2 text-sm">
+        Choose response method:
+      </h4>
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={getCameraPermission}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg flex items-center transition-colors"
+          className="flex-1 bg-purple-600 flex items-center justify-center hover:bg-purple-700 text-white px-3 py-2 rounded text-sm transition-colors min-w-fit"
         >
-          <Camera className="w-5 h-5 mr-2" />
-          Record Response
+          <Camera className="w-4 h-4 mr-1" />
+          Record
         </button>
         <button
           onClick={handleUploadClick}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center transition-colors"
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded flex items-center justify-center transition-colors text-sm min-w-fit"
         >
-          <Upload className="w-5 h-5 mr-2" />
-          Upload Video
+          <Upload className="w-4 h-4 mr-1" />
+          Upload
         </button>
       </div>
       <input
@@ -342,118 +380,129 @@ const Interview: React.FC<InterviewProps> = ({ data, onExit, onComplete }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-white">Video Interview</h1>
-            <p className="text-gray-300">
+    <div className="min-h-screen bg-gray-900 p-15 max-h-screen overflow-y-auto flex flex-col justify-around">
+      {/* Compact Header */}
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h1 className="text-xl font-bold text-white">
+            {setup?.company} Mock Interview
+          </h1>
+          <div className="flex gap-4 text-gray-400 text-sm mt-1">
+            <span>Position: {setup?.position}</span>
+            <span>Experience: {setup?.experience}</span>
+          </div>
+        </div>
+        <button
+          onClick={handleExitInterview}
+          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm transition-colors"
+        >
+          Exit
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2 justify-center mt-4">
+        {/* Compact Progress */}
+        <div className="mb-4">
+          <div className="flex justify-between items-center mb-1">
+            <p className="text-gray-300 text-sm">
               Question {currentQuestionIndex + 1} of {totalQuestions}
             </p>
+            <p className="text-xs text-gray-400">
+              {Object.values(responses).filter((r) => r !== null).length}{" "}
+              completed
+            </p>
           </div>
-          <button
-            onClick={handleExitInterview}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Exit Interview
-          </button>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentQuestionIndex + 1) / totalQuestions) * 100}%` }}
+          <div className="bg-gray-700 rounded-full h-1.5">
+            <div
+              className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+              style={{
+                width: `${
+                  ((currentQuestionIndex + 1) / totalQuestions) * 100
+                }%`,
+              }}
             ></div>
           </div>
         </div>
 
-        {/* Current Question */}
-        <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 mb-8">
-          <h2 className="text-xl font-semibold text-purple-300 mb-4">
-            Question {currentQuestionIndex + 1}
-          </h2>
-          <p className="text-white text-lg mb-6 leading-relaxed">
-            {currentQuestion}
-          </p>
-          
-          {/* Response Area */}
-          <div className="space-y-4">
-            {currentResponse ? renderVideoResponse() : 
-             permission && stream ? renderRecordingInterface() : 
-             renderInitialChoice()}
+        {/* Main Content in Two Columns */}
+        <div className="flex flex-col gap-10 mb-4 mt-5 md:flex-row md:gap-5 md:justify-between">
+          {/* Question Column */}
+          <div className="bg-gray-800 rounded-lg p-4 border border-gray-700 md:basis-1/2">
+            <h2 className="text-lg font-semibold text-purple-300 mb-2">
+              Question {currentQuestionIndex + 1}
+            </h2>
+            <p className="text-white text-sm mb-3 leading-relaxed">
+              {currentQuestion}
+            </p>
           </div>
+
+          {/* Response Column */}
+          {currentResponse
+            ? renderVideoResponse()
+            : permission && stream
+            ? renderRecordingInterface()
+            : renderInitialChoice()}
+        </div>
+      </div>
+
+      {/* Compact Navigation */}
+      <div className="flex justify-between items-center mb-3">
+        <button
+          onClick={handlePrevQuestion}
+          disabled={currentQuestionIndex === 0}
+          className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-4 py-2 rounded text-sm transition-colors mt-10"
+        >
+          Previous
+        </button>
+
+        <div className="flex gap-2 flex-wrap justify-center mt-10">
+          {data.questions.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => handleNavClick(index)}
+              disabled={index > maxUnlockedQuestion}
+              className={`w-8 h-8 rounded-full text-xs font-medium transition-colors ${
+                index === currentQuestionIndex
+                  ? "bg-purple-600 text-white"
+                  : responses[index]
+                  ? "bg-green-600 text-white"
+                  : index <= maxUnlockedQuestion
+                  ? "bg-gray-600 text-gray-300 hover:bg-gray-500"
+                  : "bg-gray-700 text-gray-500 cursor-not-allowed"
+              }`}
+            >
+              {index + 1}
+            </button>
+          ))}
         </div>
 
-        {/* Navigation Buttons */}
-        <div className="flex justify-between items-center mb-8">
+        {isLastQuestion ? (
           <button
-            onClick={handlePrevQuestion}
-            disabled={currentQuestionIndex === 0}
-            className="bg-gray-600 hover:bg-gray-500 disabled:bg-gray-700 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg transition-colors"
+            onClick={handleCompleteInterview}
+            disabled={isSubmitting}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors font-semibold flex items-center"
           >
-            Previous
-          </button>
-
-          <div className="flex gap-4">
-            {isLastQuestion ? (
-              <button
-                onClick={handleCompleteInterview}
-                disabled={isSubmitting}
-                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white px-8 py-3 rounded-lg transition-colors font-semibold flex items-center"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5 mr-2" />
-                    Submit Interview
-                  </>
-                )}
-              </button>
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-1"></div>
+                Submitting...
+              </>
             ) : (
-              <button
-                onClick={handleNextQuestion}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors flex items-center"
-              >
-                Next
-                <SkipForward className="w-4 h-4 ml-2" />
-              </button>
+              <>
+                <Send className="w-4 h-4 mr-1" />
+                Submit
+              </>
             )}
-          </div>
-        </div>
-
-        {/* Question Counter */}
-        <div className="text-center">
-          <div className="flex justify-center gap-2 flex-wrap">
-            {data.questions.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => handleNavClick(index)}
-                disabled={index > maxUnlockedQuestion}
-                className={`w-10 h-10 rounded-full text-sm font-medium transition-colors ${
-                  index === currentQuestionIndex
-                    ? 'bg-purple-600 text-white'
-                    : responses[index]
-                    ? 'bg-green-600 text-white'
-                    : index <= maxUnlockedQuestion
-                    ? 'bg-gray-600 text-gray-300 hover:bg-gray-500'
-                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-3">
-            {Object.values(responses).filter(r => r !== null).length} of {totalQuestions} questions completed
-          </p>
-        </div>
+          </button>
+        ) : (
+          <button
+            onClick={handleNextQuestion}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm transition-colors flex items-center mt-10"
+          >
+            Next
+            <SkipForward className="w-3 h-3 ml-1" />
+          </button>
+        )}
       </div>
     </div>
   );
