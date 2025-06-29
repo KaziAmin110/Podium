@@ -1,4 +1,5 @@
 import { useState } from "react";
+// Assuming QuestionBody is in the same directory or adjust the path.
 import QuestionBody, { type ResponseData } from "../components/QuestionBody";
 
 const InterviewPage = ({
@@ -6,20 +7,17 @@ const InterviewPage = ({
 }: {
   questions: Record<number, string>;
 }) => {
-  // State remains 0-indexed, which is correct.
-  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [currentQuestion, setCurrentQuestion] = useState(1);
   const [responses, setResponses] = useState<
     Record<number, ResponseData | null>
   >({});
 
-  // FIX: This now correctly determines the total number of questions from the props.
   const totalQuestions = Object.keys(questions).length;
 
-  // FIX: This logic now correctly uses 0-based indices.
   const highestAnswered = Object.keys(responses)
     .filter((key) => responses[Number(key)] !== null)
     .map(Number)
-    .reduce((max, current) => Math.max(max, current), -1); // CHANGED: Start with -1 for better empty-state logic
+    .reduce((max, current) => Math.max(max, current), 0);
 
   const maxUnlockedQuestion = highestAnswered + 1;
 
@@ -31,73 +29,53 @@ const InterviewPage = ({
       }
       return {
         ...prevResponses,
-        [currentQuestion]: response, // Uses the correct 0-indexed currentQuestion
+        [currentQuestion]: response,
       };
     });
   };
 
-  // FIX: This handler now correctly receives and sets a 0-based index.
-  const handleNavClick = (questionIndex: number) => {
-    if (questionIndex <= maxUnlockedQuestion) {
-      setCurrentQuestion(questionIndex);
+  const handleNavClick = (questionNumber: number) => {
+    if (questionNumber <= maxUnlockedQuestion) {
+      setCurrentQuestion(questionNumber);
     }
   };
 
+  // --- NEW: Function to handle moving to the next question ---
   const handleNavigateNext = () => {
-    const nextQuestionIndex = currentQuestion + 1;
-    // FIX: The boundary check now correctly uses '<' with a 0-based index.
-    if (nextQuestionIndex < totalQuestions) {
-      setCurrentQuestion(nextQuestionIndex);
+    const nextQuestionNumber = currentQuestion + 1;
+    if (nextQuestionNumber <= totalQuestions) {
+      setCurrentQuestion(nextQuestionNumber);
     }
   };
-
-  // If there are no questions (e.g., API failed or is loading), show a message.
-  if (totalQuestions === 0) {
-    return (
-      <div className="page-content">
-        <h2>Loading questions or no questions found...</h2>
-        <p>
-          If you just started the interview, please wait a moment. Otherwise,
-          try returning to the home page.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div className="page-content">
       <section className="nav-header">
-        {/* FIX: Replaced hardcoded buttons with a dynamic map based on totalQuestions. */}
-        {Array.from({ length: totalQuestions }, (_, index) => {
-          const isUnlocked = index <= maxUnlockedQuestion;
-          const questionNumberForDisplay = index + 1; // For the UI
-
+        {[1, 2, 3, 4, 5].map((item) => {
+          const isUnlocked = item <= maxUnlockedQuestion;
           return (
             <button
-              key={index}
-              // CHANGED: onClick now passes the correct 0-based index.
-              onClick={() => handleNavClick(index)}
+              key={item}
+              onClick={() => handleNavClick(item)}
               disabled={!isUnlocked}
-              // CHANGED: Class name logic now correctly uses the 0-based index.
-              className={`${responses[index] ? "answered" : ""} ${
-                currentQuestion === index ? "active" : ""
+              className={`${responses[item] ? "answered" : ""} ${
+                currentQuestion === item ? "active" : ""
               }`}
             >
-              {questionNumberForDisplay} {/* Display the 1-based number */}
+              {item}
             </button>
           );
         })}
       </section>
       <section className="question-display">
         <QuestionBody
-          // All props are now passed with the correct 0-indexed values.
           currentQuestionIndex={currentQuestion}
           question={questions[currentQuestion]}
           response={responses[currentQuestion] || null}
           onResponseChange={handleResponseChange}
+          // --- NEW PROPS passed down ---
           onNavigateNext={handleNavigateNext}
-          // FIX: The check for the last question is now correct for a 0-based index.
-          isLastQuestion={currentQuestion === totalQuestions - 1}
+          isLastQuestion={currentQuestion === totalQuestions}
         />
       </section>
       <style>{`
