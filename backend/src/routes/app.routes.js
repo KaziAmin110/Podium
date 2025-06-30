@@ -118,18 +118,6 @@ appRoutes.post(
   upload.single("video"),
   async (req, res) => {
     try {
-<<<<<<< Updated upstream
-      const question = req.body.question;
-      const company = req.body.company;
-      const position = req.body.positionTitle;
-      const experience = req.body.experience;
-      const tempPath = path.resolve("./temp/video.mp4");
-
-      if (!req.file) {
-        throw new Error("Video file is required");
-      }
-
-=======
       // Validate required fields
       const { question, company, position, experience } = req.body;
 
@@ -162,69 +150,22 @@ appRoutes.post(
       tempPath = path.resolve(`./temp/video_${timestamp}_${randomId}.mp4`);
 
       // Ensure temp directory exists
->>>>>>> Stashed changes
       await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
       await fs.promises.writeFile(tempPath, req.file.buffer);
 
-<<<<<<< Updated upstream
-      const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
-=======
       // Convert video to base64
       const base64VideoFile = await fs.promises.readFile(tempPath, {
         encoding: "base64",
       });
->>>>>>> Stashed changes
 
       const contents = [
         {
           inlineData: {
-<<<<<<< Updated upstream
-            mimeType: "video/mp4",
-=======
             mimeType: req.file.mimetype, // Use actual mimetype from uploaded file
->>>>>>> Stashed changes
             data: base64VideoFile,
           },
         },
         {
-<<<<<<< Updated upstream
-          text: `
-Review the candidate's answer to this interview question honestly and score the response from 1 to 10.
-You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
-Tell them their faults but also tell them how to improve in overall feedback
-
-Provide a JSON output with these keys:
-- score (int)
-- strengths (list of strings)
-- weaknesses (list of strings)
-- overall_feedback (string)
-
-Do not add any extra formatting or text outside the JSON.
-
-The company is "${company}".
-The position is "${position}".
-The experience level is "${experience}".
-
-Question: "${question}".
-`,
-        },
-      ];
-
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents,
-      });
-
-      await fs.promises.unlink(tempPath);
-
-      const reviewJson = JSON.parse(cleanJSONResponse(response.text));
-
-      return res.json({ review: reviewJson });
-    } catch (error) {
-      console.error("Error generating review:", error);
-      res.status(500).json({ error: "Failed to generate review" });
-      return;
-=======
           text: `Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are responding directly to the candidate; address them as "you" and provide constructive feedback on their faults while also giving specific advice on how to improve.
 
 Provide a JSON output with these keys:
@@ -319,7 +260,6 @@ Please analyze the candidate's video response and provide detailed feedback.`,
       return res.status(500).json({
         error: "Failed to generate review. Please try again.",
       });
->>>>>>> Stashed changes
     }
   }
 );
