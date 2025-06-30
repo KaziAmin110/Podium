@@ -2,71 +2,28 @@ import { Router } from "express";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 import { v4 as uuidv4 } from "uuid";
+import multer from "multer";
+import * as fs from "node:fs";
+import path from "path";
 
 dotenv.config();
 
 const appRoutes = Router();
 const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 
-appRoutes.get("/test", (req, res) => {
-  res.send("Hello from the App API!");
-});
-
-function cleanJSONResponse(text) {
-  return text.replace(/```json|```/g, "").trim();
-}
-
-async function generateInterviewQuestions(positionTitle, company, experience) {
-  const prompt = `
-You are an interview assistant. Generate 5 interview questions for a candidate applying for the position of "${positionTitle}" at "${company}" with an experience level of "${experience}".
-If the company listed is small and unknown, ask more general questions. If the company is large, ask company-specific questions and general questions.
-The list size should be the same as the question count, meaning no null values should appear in the json you return.
-Respond ONLY in this JSON format:
-{
-  "0": "First question?",
-  "1": "Second question?",
-  "2": "Third question?",
-  "3": "Fourth question?",
-  "4": "Fifth question?"
-}
-`;
-  const result = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
-    contents: prompt,
-  });
-  const rawText = result.text;
-  const cleanedText = cleanJSONResponse(rawText);
-
-  const parsed = JSON.parse(cleanedText);
-  return parsed;
-}
-
-// Generate interview questions
-appRoutes.post("/generate-questions", async (req, res) => {
-  const { positionTitle, company, experience } = req.body;
-  if (!positionTitle || !company || !experience) {
-    return res
-      .status(400)
-      .json({ error: "positionTitle, company, and experience are required" });
-  }
-
-  const questions = await generateInterviewQuestions(
-    positionTitle,
-    company,
-    experience
-  );
-  res.json(questions);
-});
-
 //Generate reviews
 const upload = multer();
 const model = "gemini-1.5-flash";
 
-import multer from "multer";
-import * as fs from "node:fs";
-import path from "path";
+appRoutes.get("/test", (req, res) => {
+  res.send("Hello from the App API!");
+});
 
 // Helper function to validate required fields
+function cleanJSONResponse(text) {
+  return text.replace(/```json|```/g, "").trim();
+}
+
 function validateRequestData(req) {
   const { question, company, position, experience } = req.body;
   const errors = [];
@@ -89,6 +46,71 @@ function validateRequestData(req) {
 
   return errors;
 }
+
+async function generateInterviewQuestions(
+  positionTitle,
+  company,
+  experience,
+  count
+) {
+  const prompt =
+    `You are an expert Interview Question Generator. Your role is to act as a seasoned hiring manager for the specified company.
+
+Your task is to generate exactly ${count} diverse and realistic interview questions for a candidate with the following profile:
+- Company: "${company}"
+- Position: "${positionTitle}"
+- Experience Level: "${experience}"
+
+The questions must be a thoughtful mix covering several of the following key areas:
+- Technical skills relevant to the role (e.g., algorithms, system design, language-specific knowledge)
+- Behavioral and situational judgment
+- Problem-solving and analytical thinking
+- Teamwork and collaboration
+- Cultural alignment with "${company}"
+
+**CRITICAL INSTRUCTIONS FOR OUTPUT:**
+1.  You MUST generate exactly ${count} questions.
+2.  Your response must be ONLY a single, valid JSON object.
+3.  The JSON object must contain keys as strings, starting from "0" and incrementing for each question.
+4.  Do NOT include any introductory text, explanations, or markdown formatting like \`\`\`json before or after the JSON object.
+
+**EXAMPLE OUTPUT for count = 3:**
+{
+  "0": "This would be the first generated question, tailored to the role.",
+  "1": "This would be the second, distinct question.",
+  "2": "This would be the third and final question."
+}
+`.trim();
+  const result = await ai.models.generateContent({
+    model: "gemini-1.5-flash",
+    contents: prompt,
+  });
+  const rawText = result.text;
+  const cleanedText = cleanJSONResponse(rawText);
+
+  const parsed = JSON.parse(cleanedText);
+  console.log("Generated questions:", parsed);
+  return parsed;
+}
+
+// Generate interview questions
+appRoutes.post("/generate-questions", async (req, res) => {
+  const { positionTitle, company, experience, count } = req.body;
+
+  if (!positionTitle || !company || !experience || !count) {
+    return res.status(400).json({
+      error: "positionTitle, company, experience, and count are required",
+    });
+  }
+
+  const questions = await generateInterviewQuestions(
+    positionTitle,
+    company,
+    experience,
+    count
+  );
+  return res.json(questions);
+});
 
 // Route for generating reviews
 appRoutes.post(
@@ -147,10 +169,6 @@ appRoutes.post(
       const base64VideoFile = await fs.promises.readFile(tempPath, {
         encoding: "base64",
       });
-
-      console.log("Comopany :", company);
-      console.log("Position :", position);
-      console.log("Experience :", experience);
 
       // Construct the prompt for Gemini
       const prompt = `

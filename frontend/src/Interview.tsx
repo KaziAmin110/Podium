@@ -92,6 +92,9 @@ const Interview: React.FC<InterviewProps> = ({
     );
   }
 
+  console.log("Interview data loaded:", data);
+  console.log("Interview setup:", setup);
+
   const totalQuestions = data.questions.length;
   const highestAnswered = Object.keys(responses)
     .filter((key) => responses[Number(key)] !== null)
@@ -272,6 +275,7 @@ const Interview: React.FC<InterviewProps> = ({
   // Handle interview completion
   const handleCompleteInterview = async () => {
     setIsSubmitting(true);
+    console.log(data);
     try {
       // Convert responses to array format for the parent component
       const responseArray: ResponseData[] = [];
@@ -550,9 +554,9 @@ const Interview: React.FC<InterviewProps> = ({
         </button>
 
         <div className="flex gap-2 justify-center">
-          {data.questions.map((_, index) => (
+          {data.questions.map((question, index) => (
             <button
-              key={index}
+              key={question}
               onClick={() => handleNavClick(index)}
               disabled={index > maxUnlockedQuestion}
               className={`w-10 h-10 rounded-full font-medium transition-colors ${
