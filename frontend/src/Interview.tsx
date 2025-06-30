@@ -99,26 +99,18 @@ const Interview: React.FC<InterviewProps> = ({
       )
     ) {
       onExit();
+      handleCleanupVideos();
     }
   };
 
-  const handleCleanupVidoes = () => {
+  const handleCleanupVideos = () => {
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
     }
-<<<<<<< Updated upstream
-    // Cleanup video URLs on unmount
-    Object.values(responses).forEach((response) => {
-      if (response?.videoUrl) {
-        URL.revokeObjectURL(response.videoUrl);
-      }
-    });
-=======
     setData(null);
     setSetup(null);
     setResponses({});
     setCurrentQuestionIndex(0);
->>>>>>> Stashed changes
   };
 
   const getCameraPermission = async () => {
@@ -297,7 +289,7 @@ const Interview: React.FC<InterviewProps> = ({
       setResponses(responseArray);
 
       await onInterviewComplete(responseArray);
-      handleCleanupVidoes();
+      handleCleanupVideos();
     } catch (error) {
       console.error("Error completing interview:", error);
       alert("Failed to submit interview. Please try again.");
