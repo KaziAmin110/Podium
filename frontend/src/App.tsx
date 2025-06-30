@@ -201,8 +201,6 @@ function App() {
         }
       );
 
-      console.log("Processed feedbacks:", feedbacks);
-
       // Calculate overall score (average of individual scores, excluding errors)
       const validScores = feedbacks
         .filter((f) => f.score !== undefined)
@@ -247,9 +245,6 @@ function App() {
           duration: "25 minutes", // You could calculate actual duration
         },
       };
-
-      console.log("Final report data:", enhancedReportData);
-      console.log("Setting report data and navigating to report view...");
 
       setReportData(enhancedReportData);
       setCurrentView("report");

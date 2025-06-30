@@ -53,21 +53,6 @@ const Interview: React.FC<InterviewProps> = ({
   const liveVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup effects
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-      // Cleanup video URLs on unmount
-      Object.values(responses).forEach((response) => {
-        if (response?.videoUrl) {
-          URL.revokeObjectURL(response.videoUrl);
-        }
-      });
-    };
-  }, [stream, responses]);
-
   useEffect(() => {
     if (permission && stream && liveVideoRef.current) {
       liveVideoRef.current.srcObject = stream;
@@ -92,9 +77,6 @@ const Interview: React.FC<InterviewProps> = ({
     );
   }
 
-  console.log("Interview data loaded:", data);
-  console.log("Interview setup:", setup);
-
   const totalQuestions = data.questions.length;
   const highestAnswered = Object.keys(responses)
     .filter((key) => responses[Number(key)] !== null)
@@ -114,6 +96,18 @@ const Interview: React.FC<InterviewProps> = ({
     ) {
       onExit();
     }
+  };
+
+  const handleCleanupVidoes = () => {
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+    // Cleanup video URLs on unmount
+    Object.values(responses).forEach((response) => {
+      if (response?.videoUrl) {
+        URL.revokeObjectURL(response.videoUrl);
+      }
+    });
   };
 
   const getCameraPermission = async () => {
@@ -275,7 +269,6 @@ const Interview: React.FC<InterviewProps> = ({
   // Handle interview completion
   const handleCompleteInterview = async () => {
     setIsSubmitting(true);
-    console.log(data);
     try {
       // Convert responses to array format for the parent component
       const responseArray: ResponseData[] = [];
@@ -285,10 +278,7 @@ const Interview: React.FC<InterviewProps> = ({
           responseArray.push(response);
         } else {
           // Create empty response for missing answers
-          responseArray.push({
-            videoUrl: responses[i]?.videoUrl || "",
-            videoBlob: responses[i]?.videoBlob || null,
-          });
+          throw new Error(`Missing response for question ${i + 1}`);
         }
       }
 
@@ -296,6 +286,7 @@ const Interview: React.FC<InterviewProps> = ({
       setResponses(responseArray);
 
       await onInterviewComplete(responseArray);
+      handleCleanupVidoes();
     } catch (error) {
       console.error("Error completing interview:", error);
       alert("Failed to submit interview. Please try again.");
