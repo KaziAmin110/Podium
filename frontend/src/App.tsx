@@ -93,6 +93,14 @@ function App() {
     const apiUrl = "http://localhost:3000/api/app/generate-reviews";
 
     // Create FormData to match your existing API format
+    console.log(videoBlob);
+    if (!(videoBlob instanceof Blob)) {
+      console.error("Invalid video blob:", videoBlob);
+      return {
+        question: question,
+        error: "Invalid video blob",
+      };
+    }
     const formData = new FormData();
     formData.append("question", question);
     formData.append("company", interviewSetup?.company || "");
@@ -104,8 +112,7 @@ function App() {
       `response-question-${questionIndex + 1}.mp4`
     );
 
-    console.log(`Submitting question ${questionIndex + 1}:`, question);
-
+    console.log("Sent to Backend");
     try {
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -117,7 +124,6 @@ function App() {
       }
 
       const data = await response.json();
-      console.log(`Received analysis for question ${questionIndex + 1}:`, data);
       return data;
     } catch (error) {
       console.error(`Failed to analyze question ${questionIndex + 1}:`, error);
@@ -134,8 +140,6 @@ function App() {
     if (!interviewData || !interviewSetup) return;
 
     try {
-      console.log("Starting interview analysis...");
-
       // Submit all videos to backend and collect responses
       const analysisPromises = responses.map(async (response, index) => {
         const question = interviewData.questions[index];
@@ -157,15 +161,10 @@ function App() {
       // Wait for all analyses to complete
       const analysisResults = await Promise.all(analysisPromises);
 
-      console.log("All analyses completed:", analysisResults);
-      console.log("Processing results into report format...");
-
       // Process the results into your expected JSON format
       const feedbacks: QuestionFeedback[] = analysisResults.map(
         (result, index) => {
           const question = interviewData.questions[index];
-
-          console.log(`Processing result ${index + 1}:`, result);
 
           if (result.error) {
             return {
@@ -176,10 +175,6 @@ function App() {
 
           // Handle the nested review structure from your backend
           if (result.review) {
-            console.log(
-              `Found review data for question ${index + 1}:`,
-              result.review
-            );
             return {
               question: question,
               score: result.review.score || undefined,
@@ -190,7 +185,6 @@ function App() {
           }
 
           // Fallback for direct structure (if backend format changes)
-          console.log(`Using fallback structure for question ${index + 1}`);
           return {
             question: question,
             score: result.score || undefined,
@@ -259,7 +253,6 @@ function App() {
       });
 
       // Fallback to mock data if analysis fails completely
-      console.log("Creating fallback report data...");
       const mockReportData: ReportData = {
         feedbacks: interviewData.questions.map((question) => ({
           question,
@@ -282,7 +275,6 @@ function App() {
         },
       };
 
-      console.log("Fallback report data:", mockReportData);
       setReportData(mockReportData);
       setCurrentView("report");
     }
@@ -296,7 +288,9 @@ function App() {
       {currentView === "interview" && (
         <Interview
           data={interviewData}
+          setData={setInterviewData}
           setup={interviewSetup}
+          setSetup={setInterviewSetup}
           onExit={handleBackToHome}
           responses={responses}
           setResponses={setResponses}

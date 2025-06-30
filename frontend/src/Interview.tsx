@@ -25,7 +25,9 @@ interface InterviewSetup {
 
 interface InterviewProps {
   data: InterviewData | null;
+  setData: React.Dispatch<React.SetStateAction<InterviewData | null>>;
   setup: InterviewSetup | null;
+  setSetup: React.Dispatch<React.SetStateAction<InterviewSetup | null>>;
   onInterviewComplete: (responses: ResponseData[]) => Promise<void>;
   responses: Record<number, ResponseData | null>;
   setResponses: React.Dispatch<
@@ -36,7 +38,9 @@ interface InterviewProps {
 
 const Interview: React.FC<InterviewProps> = ({
   data,
+  setData,
   setup,
+  setSetup,
   onInterviewComplete,
   responses,
   setResponses,
@@ -102,12 +106,19 @@ const Interview: React.FC<InterviewProps> = ({
     if (stream) {
       stream.getTracks().forEach((track) => track.stop());
     }
+<<<<<<< Updated upstream
     // Cleanup video URLs on unmount
     Object.values(responses).forEach((response) => {
       if (response?.videoUrl) {
         URL.revokeObjectURL(response.videoUrl);
       }
     });
+=======
+    setData(null);
+    setSetup(null);
+    setResponses({});
+    setCurrentQuestionIndex(0);
+>>>>>>> Stashed changes
   };
 
   const getCameraPermission = async () => {

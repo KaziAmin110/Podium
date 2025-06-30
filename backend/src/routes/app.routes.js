@@ -13,7 +13,8 @@ const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 
 //Generate reviews
 const upload = multer();
-const model = "gemini-1.5-flash";
+const flash_model = "gemini-1.5-flash";
+const pro_model = "gemini-2.5-pro";
 
 appRoutes.get("/test", (req, res) => {
   res.send("Hello from the App API!");
@@ -82,7 +83,7 @@ The questions must be a thoughtful mix covering several of the following key are
 }
 `.trim();
   const result = await ai.models.generateContent({
-    model: "gemini-1.5-flash",
+    model: flash_model,
     contents: prompt,
   });
   const rawText = result.text;
@@ -117,6 +118,7 @@ appRoutes.post(
   upload.single("video"),
   async (req, res) => {
     try {
+<<<<<<< Updated upstream
       const question = req.body.question;
       const company = req.body.company;
       const position = req.body.positionTitle;
@@ -127,19 +129,65 @@ appRoutes.post(
         throw new Error("Video file is required");
       }
 
+=======
+      // Validate required fields
+      const { question, company, position, experience } = req.body;
+
+      if (!question || !company || !position || !experience) {
+        console.log("Missing required fields:");
+        return res.status(400).json({
+          error:
+            "Missing required fields: question, company, positionTitle, and experience are required",
+        });
+      }
+
+      if (!req.file) {
+        console.log("Video file is required");
+        return res.status(400).json({
+          error: "Video file is required",
+        });
+      }
+
+      // Validate file type
+      if (!req.file.mimetype.startsWith("video/")) {
+        console.log("Uploaded file is not a video");
+        return res.status(400).json({
+          error: "Uploaded file must be a video",
+        });
+      }
+
+      // Create unique temp file path to avoid conflicts
+      const timestamp = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+      tempPath = path.resolve(`./temp/video_${timestamp}_${randomId}.mp4`);
+
+      // Ensure temp directory exists
+>>>>>>> Stashed changes
       await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
       await fs.promises.writeFile(tempPath, req.file.buffer);
 
+<<<<<<< Updated upstream
       const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
+=======
+      // Convert video to base64
+      const base64VideoFile = await fs.promises.readFile(tempPath, {
+        encoding: "base64",
+      });
+>>>>>>> Stashed changes
 
       const contents = [
         {
           inlineData: {
+<<<<<<< Updated upstream
             mimeType: "video/mp4",
+=======
+            mimeType: req.file.mimetype, // Use actual mimetype from uploaded file
+>>>>>>> Stashed changes
             data: base64VideoFile,
           },
         },
         {
+<<<<<<< Updated upstream
           text: `
 Review the candidate's answer to this interview question honestly and score the response from 1 to 10.
 You are also responding to the user; you are supposed to give advice. Make sure to address them as "you"
@@ -176,6 +224,102 @@ Question: "${question}".
       console.error("Error generating review:", error);
       res.status(500).json({ error: "Failed to generate review" });
       return;
+=======
+          text: `Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are responding directly to the candidate; address them as "you" and provide constructive feedback on their faults while also giving specific advice on how to improve.
+
+Provide a JSON output with these keys:
+- score (integer from 1-10)
+- strengths (array of strings)
+- weaknesses (array of strings)  
+- overall_feedback (string with specific, actionable advice)
+
+Do not add any extra formatting or text outside the JSON.
+
+Interview Context:
+- Company: "${company}"
+- Position: "${position}"
+- Experience Level: "${experience}"
+- Question: "${question}"
+
+Please analyze the candidate's video response and provide detailed feedback.`,
+        },
+      ];
+
+      // Generate content using AI
+      const response = await ai.models.generateContent({
+        model: pro_model, // Updated to newer model
+        contents,
+      });
+
+      // Clean up temp file immediately after processing
+      if (tempPath) {
+        try {
+          await fs.promises.unlink(tempPath);
+          tempPath = null; // Reset to avoid double cleanup
+        } catch (unlinkError) {
+          console.warn(
+            "Warning: Could not delete temp file:",
+            unlinkError.message
+          );
+        }
+      }
+
+      // Parse and validate AI response
+      let reviewJson;
+      try {
+        const cleanedResponse = cleanJSONResponse(response.text);
+        reviewJson = JSON.parse(cleanedResponse);
+
+        // Validate required fields in response
+        if (
+          !reviewJson.score ||
+          !reviewJson.strengths ||
+          !reviewJson.weaknesses ||
+          !reviewJson.overall_feedback
+        ) {
+          throw new Error("Invalid AI response format");
+        }
+
+        // Validate score is within range
+        if (reviewJson.score < 1 || reviewJson.score > 10) {
+          reviewJson.score = Math.max(1, Math.min(10, reviewJson.score));
+        }
+      } catch (parseError) {
+        console.error("Error parsing AI response:", parseError);
+        return res.status(500).json({
+          error: "Failed to parse AI response. Please try again.",
+        });
+      }
+
+      return res.json({
+        success: true,
+        review: reviewJson,
+      });
+    } catch (error) {
+      console.error("Error generating review:", error);
+
+      // Clean up temp file in case of error
+      if (tempPath) {
+        try {
+          await fs.promises.unlink(tempPath);
+        } catch (unlinkError) {
+          console.warn(
+            "Warning: Could not delete temp file after error:",
+            unlinkError.message
+          );
+        }
+      }
+
+      // Return appropriate error response
+      if (error.message.includes("Video file is required")) {
+        console.log("Video file is required");
+        return res.status(400).json({ error: error.message });
+      }
+
+      return res.status(500).json({
+        error: "Failed to generate review. Please try again.",
+      });
+>>>>>>> Stashed changes
     }
   }
 );
