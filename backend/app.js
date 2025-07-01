@@ -3,12 +3,14 @@ import express from "express";
 import appRoutes from "./src/routes/app.routes.js"; // Adjust the path as necessary
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import rateLimit from "express-rate-limit";
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(rateLimit);
 app.use(
   cors({
     origin: "http://localhost:5173", // Adjust this to your frontend URL

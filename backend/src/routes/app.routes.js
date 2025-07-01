@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import multer from "multer";
 import * as fs from "node:fs";
 import path from "path";
+import rateLimit from "express-rate-limit";
 
 dotenv.config();
 
@@ -16,37 +17,74 @@ const upload = multer();
 const flash_model = "gemini-1.5-flash";
 const pro_model = "gemini-2.5-pro";
 
-appRoutes.get("/test", (req, res) => {
-  res.send("Hello from the App API!");
+// Rate limiting configurations
+const generalRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: {
+    error: "Too many requests from this IP, please try again later.",
+    retryAfter: "15 minutes",
+  },
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
+
+// Stricter rate limit for AI-powered endpoints
+const aiRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 20, // limit each IP to 20 AI requests per hour
+  message: {
+    error:
+      "AI request limit exceeded. Please wait before making more requests.",
+    retryAfter: "1 hour",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Very strict rate limit for video processing (resource intensive)
+const videoRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 video uploads per hour
+  message: {
+    error:
+      "Video processing limit exceeded. Please wait before uploading more videos.",
+    retryAfter: "1 hour",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general rate limiting to all routes
+appRoutes.use(generalRateLimit);
 
 // Helper function to validate required fields
 function cleanJSONResponse(text) {
   return text.replace(/```json|```/g, "").trim();
 }
 
-function validateRequestData(req) {
-  const { question, company, position, experience } = req.body;
-  const errors = [];
+// function validateRequestData(req) {
+//   const { question, company, position, experience } = req.body;
+//   const errors = [];
 
-  if (!question || question.trim() === "") {
-    errors.push("Question is required");
-  }
-  if (!company || company.trim() === "") {
-    errors.push("Company is required");
-  }
-  if (!position || position.trim() === "") {
-    errors.push("Position is required");
-  }
-  if (!experience || experience.trim() === "") {
-    errors.push("Experience level is required");
-  }
-  if (!req.file) {
-    errors.push("Video file is required");
-  }
+//   if (!question || question.trim() === "") {
+//     errors.push("Question is required");
+//   }
+//   if (!company || company.trim() === "") {
+//     errors.push("Company is required");
+//   }
+//   if (!position || position.trim() === "") {
+//     errors.push("Position is required");
+//   }
+//   if (!experience || experience.trim() === "") {
+//     errors.push("Experience level is required");
+//   }
+//   if (!req.file) {
+//     errors.push("Video file is required");
+//   }
 
-  return errors;
-}
+//   return errors;
+// }
 
 async function generateInterviewQuestions(
   positionTitle,
@@ -93,8 +131,8 @@ The questions must be a thoughtful mix covering several of the following key are
   return parsed;
 }
 
-// Generate interview questions
-appRoutes.post("/generate-questions", async (req, res) => {
+// Endpoint for generating interview questions with AI rate limiting
+appRoutes.post("/generate-questions", aiRateLimit, async (req, res) => {
   const { positionTitle, company, experience, count } = req.body;
 
   if (!positionTitle || !company || !experience || !count) {
@@ -103,18 +141,27 @@ appRoutes.post("/generate-questions", async (req, res) => {
     });
   }
 
-  const questions = await generateInterviewQuestions(
-    positionTitle,
-    company,
-    experience,
-    count
-  );
-  return res.json(questions);
+  try {
+    const questions = await generateInterviewQuestions(
+      positionTitle,
+      company,
+      experience,
+      count
+    );
+    return res.json(questions);
+  } catch (error) {
+    console.error("Error generating questions:", error);
+    return res.status(500).json({
+      error: "Failed to generate interview questions",
+    });
+  }
 });
 
-// Route for generating reviews
+// Endpoint for generating reviews with both AI and video rate limiting
 appRoutes.post(
   "/generate-reviews",
+  videoRateLimit, // Apply video-specific rate limit first
+  aiRateLimit, // Then apply AI rate limit
   upload.single("video"),
   async (req, res) => {
     // Generate unique filename using timestamp and random number
