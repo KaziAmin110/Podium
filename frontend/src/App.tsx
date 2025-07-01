@@ -132,6 +132,7 @@ function App() {
       }
 
       const data = await response.json();
+      console.log("Received from Backend:", data);
       return data;
     } catch (error) {
       console.error(`Failed to analyze question ${questionIndex + 1}:`, error);

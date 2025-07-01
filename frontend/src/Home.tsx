@@ -364,7 +364,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({
         {/* Header */}
         <div className="text-center mb-16 mt-14">
           <h1 className="text-6xl font-bold text-white mb-4">
-            Welcome to Podium
+            Welcome to Podium!
           </h1>
           <p className="text-xl text-gray-300">
             Practice with AI-powered mock interviews tailored to your dream
