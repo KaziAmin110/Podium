@@ -117,149 +117,76 @@ appRoutes.post(
   "/generate-reviews",
   upload.single("video"),
   async (req, res) => {
-    try {
-      // Validate required fields
-      const { question, company, position, experience } = req.body;
+    // Generate unique filename using timestamp and random number
+    const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const tempPath = path.resolve(`./temp/video_${uniqueId}.mp4`);
 
-      if (!question || !company || !position || !experience) {
-        console.log("Missing required fields:");
-        return res.status(400).json({
-          error:
-            "Missing required fields: question, company, positionTitle, and experience are required",
-        });
-      }
+    try {
+      const question = req.body.question;
+      const company = req.body.company;
+      const position = req.body.positionTitle;
+      const experience = req.body.experience;
 
       if (!req.file) {
-        console.log("Video file is required");
-        return res.status(400).json({
-          error: "Video file is required",
-        });
+        throw new Error("Video file is required");
       }
-
-      // Validate file type
-      if (!req.file.mimetype.startsWith("video/")) {
-        console.log("Uploaded file is not a video");
-        return res.status(400).json({
-          error: "Uploaded file must be a video",
-        });
-      }
-
-      // Create unique temp file path to avoid conflicts
-      const timestamp = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      tempPath = path.resolve(`./temp/video_${timestamp}_${randomId}.mp4`);
 
       // Ensure temp directory exists
       await fs.promises.mkdir(path.dirname(tempPath), { recursive: true });
+
+      // Write the uploaded file to unique temp path
       await fs.promises.writeFile(tempPath, req.file.buffer);
 
-      // Convert video to base64
-      const base64VideoFile = await fs.promises.readFile(tempPath, {
-        encoding: "base64",
-      });
+      // Read the file as base64
+      const base64VideoFile = fs.readFileSync(tempPath, { encoding: "base64" });
 
       const contents = [
         {
           inlineData: {
-            mimeType: req.file.mimetype, // Use actual mimetype from uploaded file
+            mimeType: "video/mp4",
             data: base64VideoFile,
           },
         },
         {
-          text: `Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are responding directly to the candidate; address them as "you" and provide constructive feedback on their faults while also giving specific advice on how to improve.
+          text: `Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are also responding to the user; you are supposed to give advice. Make sure to address them as "you" Tell them their faults but also tell them how to improve in overall feedback
 
 Provide a JSON output with these keys:
-- score (integer from 1-10)
-- strengths (array of strings)
-- weaknesses (array of strings)  
-- overall_feedback (string with specific, actionable advice)
+- score (int)
+- strengths (list of strings)
+- weaknesses (list of strings)
+- overall_feedback (string)
 
 Do not add any extra formatting or text outside the JSON.
 
-Interview Context:
-- Company: "${company}"
-- Position: "${position}"
-- Experience Level: "${experience}"
-- Question: "${question}"
+The company is "${company}". The position is "${position}". The experience level is "${experience}".
 
-Please analyze the candidate's video response and provide detailed feedback.`,
+Question: "${question}".`,
         },
       ];
 
-      // Generate content using AI
       const response = await ai.models.generateContent({
-        model: pro_model, // Updated to newer model
+        model: "gemini-2.5-flash",
         contents,
       });
 
-      // Clean up temp file immediately after processing
-      if (tempPath) {
-        try {
-          await fs.promises.unlink(tempPath);
-          tempPath = null; // Reset to avoid double cleanup
-        } catch (unlinkError) {
-          console.warn(
-            "Warning: Could not delete temp file:",
-            unlinkError.message
-          );
-        }
-      }
+      // Clean up: delete the temporary file
+      await fs.promises.unlink(tempPath);
 
-      // Parse and validate AI response
-      let reviewJson;
-      try {
-        const cleanedResponse = cleanJSONResponse(response.text);
-        reviewJson = JSON.parse(cleanedResponse);
+      const reviewJson = JSON.parse(cleanJSONResponse(response.text));
 
-        // Validate required fields in response
-        if (
-          !reviewJson.score ||
-          !reviewJson.strengths ||
-          !reviewJson.weaknesses ||
-          !reviewJson.overall_feedback
-        ) {
-          throw new Error("Invalid AI response format");
-        }
-
-        // Validate score is within range
-        if (reviewJson.score < 1 || reviewJson.score > 10) {
-          reviewJson.score = Math.max(1, Math.min(10, reviewJson.score));
-        }
-      } catch (parseError) {
-        console.error("Error parsing AI response:", parseError);
-        return res.status(500).json({
-          error: "Failed to parse AI response. Please try again.",
-        });
-      }
-
-      return res.json({
-        success: true,
-        review: reviewJson,
-      });
+      return res.json({ review: reviewJson });
     } catch (error) {
       console.error("Error generating review:", error);
 
-      // Clean up temp file in case of error
-      if (tempPath) {
-        try {
-          await fs.promises.unlink(tempPath);
-        } catch (unlinkError) {
-          console.warn(
-            "Warning: Could not delete temp file after error:",
-            unlinkError.message
-          );
-        }
+      // Clean up: delete temp file even if there's an error
+      try {
+        await fs.promises.unlink(tempPath);
+      } catch (unlinkError) {
+        console.error("Error deleting temp file:", unlinkError);
       }
 
-      // Return appropriate error response
-      if (error.message.includes("Video file is required")) {
-        console.log("Video file is required");
-        return res.status(400).json({ error: error.message });
-      }
-
-      return res.status(500).json({
-        error: "Failed to generate review. Please try again.",
-      });
+      res.status(500).json({ error: "Failed to generate review" });
+      return;
     }
   }
 );
