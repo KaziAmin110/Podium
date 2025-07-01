@@ -141,92 +141,282 @@ const Interview: React.FC<InterviewProps> = ({
     setIsRecording(true);
     videoChunks.current = [];
 
-    // Try different MIME types for better compatibility
-    let mimeType = "video/mp4";
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = "video/webm;codecs=vp9,opus";
-    }
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = "video/webm;codecs=vp8,opus";
-    }
+    // Enhanced MIME type detection with explicit codec specifications
+    const getOptimalMimeType = () => {
+      // Test configurations in order of preference for video compatibility
+      const configurations = [
+        { mimeType: "video/webm;codecs=vp8,opus", extension: "webm" },
+        { mimeType: "video/webm;codecs=vp9,opus", extension: "webm" },
+        { mimeType: "video/mp4;codecs=h264,aac", extension: "mp4" },
+        { mimeType: "video/webm", extension: "webm" },
+        { mimeType: "video/mp4", extension: "mp4" },
+      ];
 
-    console.log("Using MIME type:", mimeType);
-
-    const media = new MediaRecorder(stream, {
-      mimeType,
-      videoBitsPerSecond: 1000000, // 1 Mbps
-      audioBitsPerSecond: 128000, // 128 kbps
-    });
-
-    mediaRecorder.current = media;
-
-    mediaRecorder.current.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        console.log("Received chunk:", e.data.size, "bytes");
-        videoChunks.current.push(e.data);
+      for (const config of configurations) {
+        if (MediaRecorder.isTypeSupported(config.mimeType)) {
+          console.log("Selected optimal MIME type:", config.mimeType);
+          return config;
+        }
       }
+
+      // Ultimate fallback
+      return { mimeType: "video/webm", extension: "webm" };
     };
 
-    mediaRecorder.current.onerror = (e) => {
-      console.error("MediaRecorder error:", e);
-    };
+    const selectedConfig = getOptimalMimeType();
 
-    // Record in smaller chunks for better compatibility
-    mediaRecorder.current.start(1000); // 1 second chunks
+    try {
+      // Create MediaRecorder with optimized settings for video compatibility
+      const options = {
+        mimeType: selectedConfig.mimeType,
+        videoBitsPerSecond: 2500000, // Increased to 2.5 Mbps
+        audioBitsPerSecond: 128000,
+      };
+
+      // Only add bitrate if supported (some browsers don't support this)
+      const media = new MediaRecorder(stream, options);
+      mediaRecorder.current = media;
+
+      mediaRecorder.current.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          console.log("Chunk received:", {
+            size: e.data.size,
+            type: e.data.type,
+            timestamp: Date.now(),
+          });
+          videoChunks.current.push(e.data);
+        } else {
+          console.warn("Empty or invalid chunk received");
+        }
+      };
+
+      mediaRecorder.current.onerror = (e) => {
+        console.error("MediaRecorder error:", e);
+        setIsRecording(false);
+        alert("Recording error occurred. Please try again.");
+      };
+
+      mediaRecorder.current.onstart = () => {
+        console.log("Recording started with config:", selectedConfig);
+      };
+
+      mediaRecorder.current.onpause = () => {
+        console.log("Recording paused");
+      };
+
+      mediaRecorder.current.onresume = () => {
+        console.log("Recording resumed");
+      };
+
+      // Start recording - using shorter intervals for better data collection
+      mediaRecorder.current.start(1000); // Back to 1 second for consistent data flow
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      setIsRecording(false);
+      alert(
+        "Failed to start recording. Please check your browser compatibility."
+      );
+    }
   };
 
   const stopRecording = () => {
-    if (!mediaRecorder.current) return;
+    if (!mediaRecorder.current || mediaRecorder.current.state !== "recording") {
+      console.warn(
+        "MediaRecorder is not in recording state:",
+        mediaRecorder.current?.state
+      );
+      setIsRecording(false);
+      return Promise.resolve();
+    }
 
     return new Promise<void>((resolve) => {
-      mediaRecorder.current!.onstop = () => {
-        // Wait a brief moment for all data to be collected
-        setTimeout(() => {
+      const recorder = mediaRecorder.current!;
+      const originalMimeType = recorder.mimeType;
+
+      recorder.onstop = () => {
+        console.log("Recording stopped, processing data...");
+        console.log("Original MIME type:", originalMimeType);
+        console.log("Chunks collected:", videoChunks.current.length);
+
+        // Process immediately, then wait for any additional data
+        const processRecording = () => {
           if (videoChunks.current.length === 0) {
             console.error("No video chunks recorded");
             alert("Recording failed - no data was captured. Please try again.");
+            setIsRecording(false);
             resolve();
             return;
           }
 
-          const mimeType = mediaRecorder.current?.mimeType || "video/mp4";
-          const videoBlob = new Blob(videoChunks.current, { type: mimeType });
-
-          console.log("Created video blob:", {
-            size: videoBlob.size,
-            type: videoBlob.type,
-            chunks: videoChunks.current.length,
+          // Log chunk details for debugging
+          videoChunks.current.forEach((chunk, index) => {
+            console.log(`Chunk ${index}:`, {
+              size: chunk.size,
+              type: chunk.type,
+            });
           });
 
-          // Create the video URL immediately
-          const videoUrl = URL.createObjectURL(videoBlob);
+          // Create blob with multiple fallback strategies
+          const createVideoBlob = () => {
+            // Strategy 1: Use the exact MIME type from MediaRecorder
+            try {
+              const blob1 = new Blob(videoChunks.current, {
+                type: originalMimeType,
+              });
+              if (blob1.size > 0) {
+                console.log(
+                  "Created blob with original MIME type:",
+                  originalMimeType
+                );
+                return blob1;
+              }
+            } catch (e) {
+              console.warn("Failed with original MIME type:", e);
+            }
 
-          const newResponse: ResponseData = {
-            videoUrl: videoUrl,
-            videoBlob: videoBlob,
+            // Strategy 2: Use generic webm
+            try {
+              const blob2 = new Blob(videoChunks.current, {
+                type: "video/webm",
+              });
+              if (blob2.size > 0) {
+                console.log("Created blob with video/webm");
+                return blob2;
+              }
+            } catch (e) {
+              console.warn("Failed with video/webm:", e);
+            }
+
+            // Strategy 3: Use no MIME type (let browser decide)
+            try {
+              const blob3 = new Blob(videoChunks.current);
+              console.log("Created blob without MIME type");
+              return blob3;
+            } catch (e) {
+              console.error("Failed to create any blob:", e);
+              return null;
+            }
           };
 
-          setResponses((prev) => {
-            const oldResponse = prev[currentQuestionIndex];
-            if (oldResponse?.videoUrl) {
-              URL.revokeObjectURL(oldResponse.videoUrl);
-            }
-            return { ...prev, [currentQuestionIndex]: newResponse };
+          const videoBlob = createVideoBlob();
+
+          if (!videoBlob || videoBlob.size === 0) {
+            console.error("Failed to create valid video blob");
+            alert(
+              "Recording failed - could not process video data. Please try again."
+            );
+            setIsRecording(false);
+            resolve();
+            return;
+          }
+
+          console.log("Final video blob:", {
+            size: videoBlob.size,
+            type: videoBlob.type,
+            sizeInMB: (videoBlob.size / (1024 * 1024)).toFixed(2),
           });
 
-          // Stop the camera stream after recording
-          if (stream) {
-            stream.getTracks().forEach((track) => track.stop());
+          // Create object URL with error handling
+          let videoUrl;
+          try {
+            videoUrl = URL.createObjectURL(videoBlob);
+            console.log("Created video URL successfully:", videoUrl);
+          } catch (error) {
+            console.error("Failed to create object URL:", error);
+            alert("Failed to create video URL. Please try again.");
+            setIsRecording(false);
+            resolve();
+            return;
           }
-          setPermission(false);
-          setStream(null);
 
-          resolve();
-        }, 100);
+          // Test the video URL by creating a temporary video element
+          const testVideo = document.createElement("video");
+          testVideo.preload = "metadata";
+
+          testVideo.onloadedmetadata = () => {
+            console.log("Video metadata loaded successfully:", {
+              duration: testVideo.duration,
+              videoWidth: testVideo.videoWidth,
+              videoHeight: testVideo.videoHeight,
+            });
+
+            // Clean up test video
+            testVideo.remove();
+
+            // Create response object
+            const newResponse: ResponseData = {
+              videoUrl: videoUrl,
+              videoBlob: videoBlob,
+            };
+
+            setResponses((prev) => {
+              const oldResponse = prev[currentQuestionIndex];
+              if (oldResponse?.videoUrl) {
+                URL.revokeObjectURL(oldResponse.videoUrl);
+              }
+              return { ...prev, [currentQuestionIndex]: newResponse };
+            });
+
+            // Clean up camera stream
+            if (stream) {
+              stream.getTracks().forEach((track) => {
+                track.stop();
+                console.log("Stopped track:", track.kind, track.label);
+              });
+            }
+            setPermission(false);
+            setStream(null);
+            setIsRecording(false);
+
+            console.log("Recording processing completed successfully");
+            resolve();
+          };
+
+          testVideo.onerror = (e) => {
+            console.error("Video validation failed:", e);
+            console.log("Attempting to use video anyway...");
+
+            // Even if validation fails, try to use the video
+            const newResponse: ResponseData = {
+              videoUrl: videoUrl,
+              videoBlob: videoBlob,
+            };
+
+            setResponses((prev) => {
+              const oldResponse = prev[currentQuestionIndex];
+              if (oldResponse?.videoUrl) {
+                URL.revokeObjectURL(oldResponse.videoUrl);
+              }
+              return { ...prev, [currentQuestionIndex]: newResponse };
+            });
+
+            // Clean up camera stream
+            if (stream) {
+              stream.getTracks().forEach((track) => track.stop());
+            }
+            setPermission(false);
+            setStream(null);
+            setIsRecording(false);
+
+            resolve();
+          };
+
+          // Set the source to test the video
+          testVideo.src = videoUrl;
+        };
+
+        // Process the recording with a small delay to ensure all data is collected
+        setTimeout(processRecording, 300);
       };
 
-      mediaRecorder.current!.stop();
-      setIsRecording(false);
+      try {
+        console.log("Attempting to stop MediaRecorder...");
+        recorder.stop();
+      } catch (error) {
+        console.error("Error stopping MediaRecorder:", error);
+        setIsRecording(false);
+        resolve();
+      }
     });
   };
 
