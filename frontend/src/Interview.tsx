@@ -147,7 +147,7 @@ const Interview: React.FC<InterviewProps> = ({
       mimeType = "video/webm;codecs=vp9,opus";
     }
     if (!MediaRecorder.isTypeSupported(mimeType)) {
-      mimeType = "video/webm:;codecs=vp8,opus";
+      mimeType = "video/webm;codecs=vp8,opus";
     }
 
     console.log("Using MIME type:", mimeType);
@@ -178,49 +178,56 @@ const Interview: React.FC<InterviewProps> = ({
   const stopRecording = () => {
     if (!mediaRecorder.current) return;
 
-    mediaRecorder.current.onstop = () => {
-      // Wait a brief moment for all data to be collected
-      setTimeout(() => {
-        if (videoChunks.current.length === 0) {
-          console.error("No video chunks recorded");
-          alert("Recording failed - no data was captured. Please try again.");
-          return;
-        }
-
-        const mimeType = mediaRecorder.current?.mimeType || "video/mp4";
-        const videoBlob = new Blob(videoChunks.current, { type: mimeType });
-
-        console.log("Created video blob:", {
-          size: videoBlob.size,
-          type: videoBlob.type,
-          chunks: videoChunks.current.length,
-        });
-
-        // Create the video URL immediately
-        const videoUrl = URL.createObjectURL(videoBlob);
-
-        const newResponse: ResponseData = {
-          videoUrl: videoUrl,
-          videoBlob: videoBlob,
-        };
-
-        setResponses((prev) => {
-          const oldResponse = prev[currentQuestionIndex];
-          if (oldResponse?.videoUrl) {
-            URL.revokeObjectURL(oldResponse.videoUrl);
+    return new Promise<void>((resolve) => {
+      mediaRecorder.current!.onstop = () => {
+        // Wait a brief moment for all data to be collected
+        setTimeout(() => {
+          if (videoChunks.current.length === 0) {
+            console.error("No video chunks recorded");
+            alert("Recording failed - no data was captured. Please try again.");
+            resolve();
+            return;
           }
-          return { ...prev, [currentQuestionIndex]: newResponse };
-        });
 
-        // Stop the camera stream after recording
-        stream?.getTracks().forEach((track) => track.stop());
-        setPermission(false);
-        setStream(null);
-      }, 100);
-    };
+          const mimeType = mediaRecorder.current?.mimeType || "video/mp4";
+          const videoBlob = new Blob(videoChunks.current, { type: mimeType });
 
-    mediaRecorder.current.stop();
-    setIsRecording(false);
+          console.log("Created video blob:", {
+            size: videoBlob.size,
+            type: videoBlob.type,
+            chunks: videoChunks.current.length,
+          });
+
+          // Create the video URL immediately
+          const videoUrl = URL.createObjectURL(videoBlob);
+
+          const newResponse: ResponseData = {
+            videoUrl: videoUrl,
+            videoBlob: videoBlob,
+          };
+
+          setResponses((prev) => {
+            const oldResponse = prev[currentQuestionIndex];
+            if (oldResponse?.videoUrl) {
+              URL.revokeObjectURL(oldResponse.videoUrl);
+            }
+            return { ...prev, [currentQuestionIndex]: newResponse };
+          });
+
+          // Stop the camera stream after recording
+          if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+          }
+          setPermission(false);
+          setStream(null);
+
+          resolve();
+        }, 100);
+      };
+
+      mediaRecorder.current!.stop();
+      setIsRecording(false);
+    });
   };
 
   const handleUploadClick = () => fileInputRef.current?.click();
@@ -269,7 +276,7 @@ const Interview: React.FC<InterviewProps> = ({
     }
   };
 
-  // Handle interview completion
+  // Handle interview completion - FIXED VERSION
   const handleCompleteInterview = async () => {
     setIsSubmitting(true);
     try {
@@ -286,8 +293,8 @@ const Interview: React.FC<InterviewProps> = ({
       }
 
       console.log("Completed interview responses:", responseArray);
-      setResponses(responseArray);
 
+      // Pass the array to parent, but DON'T overwrite the local responses state
       await onInterviewComplete(responseArray);
       handleCleanupVideos();
     } catch (error) {
@@ -419,7 +426,7 @@ const Interview: React.FC<InterviewProps> = ({
               </button>
             ) : (
               <button
-                onClick={stopRecording}
+                onClick={() => stopRecording()}
                 className="bg-red-600 hover:bg-red-800 text-white px-6 py-3 rounded-lg font-medium flex items-center transition-colors shadow-lg"
               >
                 <div className="w-4 h-4 mr-2 bg-white"></div>
