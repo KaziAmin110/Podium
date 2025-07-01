@@ -10,6 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+//app.use(rateLimit);
 app.use(
   cors({
     origin: "http://localhost:5173", // Adjust this to your frontend URL
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 });
 
 // 5. Start the server and listen for incoming connections
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });
+
