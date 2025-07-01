@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Home from "./Home";
 import Interview from "./Interview";
 import Report from "./Report";
@@ -61,6 +61,14 @@ function App() {
   const [responses, setResponses] = useState<
     Record<number, ResponseData | null>
   >({});
+
+  useEffect(() => {
+    // Resets Interview Data, Report Data, and Interview Setup when the component mounts
+    setInterviewData(null);
+    setReportData(null);
+    setInterviewSetup(null);
+    setResponses({});
+  }, []);
 
   const handleInterviewStart = (
     data: InterviewData,

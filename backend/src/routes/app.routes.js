@@ -14,7 +14,7 @@ const ai = new GoogleGenAI(process.env.GEMINI_API_KEY);
 
 //Generate reviews
 const upload = multer();
-const flash_model = "gemini-1.5-flash";
+const flash_model = "gemini-2.5-flash";
 const pro_model = "gemini-2.5-pro";
 
 // Rate limiting configurations
@@ -63,28 +63,28 @@ function cleanJSONResponse(text) {
   return text.replace(/```json|```/g, "").trim();
 }
 
-// function validateRequestData(req) {
-//   const { question, company, position, experience } = req.body;
-//   const errors = [];
+function validateRequestData(req) {
+  const { question, company, position, experience } = req.body;
+  const errors = [];
 
-//   if (!question || question.trim() === "") {
-//     errors.push("Question is required");
-//   }
-//   if (!company || company.trim() === "") {
-//     errors.push("Company is required");
-//   }
-//   if (!position || position.trim() === "") {
-//     errors.push("Position is required");
-//   }
-//   if (!experience || experience.trim() === "") {
-//     errors.push("Experience level is required");
-//   }
-//   if (!req.file) {
-//     errors.push("Video file is required");
-//   }
+  if (!question || question.trim() === "") {
+    errors.push("Question is required");
+  }
+  if (!company || company.trim() === "") {
+    errors.push("Company is required");
+  }
+  if (!position || position.trim() === "") {
+    errors.push("Position is required");
+  }
+  if (!experience || experience.trim() === "") {
+    errors.push("Experience level is required");
+  }
+  if (!req.file) {
+    errors.push("Video file is required");
+  }
 
-//   return errors;
-// }
+  return errors;
+}
 
 async function generateInterviewQuestions(
   positionTitle,
@@ -131,7 +131,7 @@ The questions must be a thoughtful mix covering several of the following key are
   return parsed;
 }
 
-// Endpoint for generating interview questions with AI rate limiting
+// Generate interview questions with AI rate limiting
 appRoutes.post("/generate-questions", aiRateLimit, async (req, res) => {
   const { positionTitle, company, experience, count } = req.body;
 
@@ -157,7 +157,7 @@ appRoutes.post("/generate-questions", aiRateLimit, async (req, res) => {
   }
 });
 
-// Endpoint for generating reviews with both AI and video rate limiting
+// Route for generating reviews with both AI and video rate limiting
 appRoutes.post(
   "/generate-reviews",
   videoRateLimit, // Apply video-specific rate limit first
@@ -212,7 +212,7 @@ Question: "${question}".`,
       ];
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: pro_model,
         contents,
       });
 
