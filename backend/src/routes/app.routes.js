@@ -93,7 +93,7 @@ async function generateInterviewQuestions(
   count
 ) {
   const prompt =
-    `You are an expert Interview Question Generator. Your role is to give the most relevant interview questions for a candidate applying for a job at ${company} with the title "${positionTitle}. Prefer questions which have been asked more frequently".
+    `You are an expert Interview Question Generator. Your role is to give the most relevant interview questions for a candidate applying for a job at ${company} with the title "${positionTitle}. These Questions should be behavioral in nature and not technical. Prefer questions which have been asked more frequently at the given company".
 
 Your task is to generate exactly ${count} diverse and realistic interview questions for a candidate with the following profile:
 - Company: "${company}"
