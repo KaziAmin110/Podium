@@ -195,13 +195,14 @@ appRoutes.post(
           },
         },
         {
-          text: `Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are also responding to the user; you are supposed to give advice. Make sure to address them as "you" Tell them their faults but also tell them how to improve in overall feedback
+          text: `Take on the role of a hiring manager at ${company}. Review the candidate's answer to this interview question honestly and score the response from 1 to 10. You are also responding to the user; you are supposed to give genuine applicable advice. Make sure to address them as "you" Tell them their faults but also tell them how to improve in overall feedback. If a video response doesnt answer the question, does not contain any content, score it 0.
 
 Provide a JSON output with these keys:
 - score (int)
 - strengths (list of strings)
 - weaknesses (list of strings)
 - overall_feedback (string)
+- overall_tips (list of strings)
 
 Do not add any extra formatting or text outside the JSON.
 

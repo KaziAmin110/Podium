@@ -227,7 +227,7 @@ function App() {
           ? "Some questions could not be analyzed due to technical issues. Please review the individual question feedback below."
           : "Interview analysis completed. Review your performance below.");
 
-      const tips = firstSuccessfulResult?.review?.tips ||
+      const tips = firstSuccessfulResult?.review?.overall_tips ||
         firstSuccessfulResult?.tips || [
           "Practice answering common interview questions",
           "Speak clearly and maintain good eye contact with the camera",

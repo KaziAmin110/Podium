@@ -506,8 +506,12 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({
                             // Fallback to company initial if logo fails to load
                             const img = e.target as HTMLImageElement;
                             img.style.display = "none";
-                            if (img.nextSibling && img.nextSibling instanceof HTMLElement) {
-                              (img.nextSibling as HTMLElement).style.display = "block";
+                            if (
+                              img.nextSibling &&
+                              img.nextSibling instanceof HTMLElement
+                            ) {
+                              (img.nextSibling as HTMLElement).style.display =
+                                "block";
                             }
                           }}
                         />
@@ -768,7 +772,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({
                 <div
                   key={level.name}
                   onClick={() => handleLevelSelect(level.name)}
-                  className="group relative cursor-pointer transition-all duration-300 transform hover:scale-105 hover:-translate-y-1"
+                  className="group relative cursor-pointer transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 w-full scale-105"
                 >
                   <div
                     className={`relative p-4 rounded-2xl shadow-xl border-2 h-24 w-full flex flex-col justify-center items-center overflow-hidden transition-all duration-300 ${
