@@ -290,7 +290,7 @@ const PodiumJobSearch: React.FC<PodiumJobSearchProps> = ({
 
     try {
       const response = await fetch(
-        "http://localhost:3000/api/app/generate-questions",
+        "http://162.192.181.84:4000/api/app/generate-questions",
         {
           method: "POST",
           headers: {

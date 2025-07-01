@@ -13,7 +13,7 @@ app.use(cookieParser());
 //app.use(rateLimit);
 app.use(
   cors({
-    origin: "http://localhost:5173", // Adjust this to your frontend URL
+    origin: ["http://162.192.181.84:5173"],
     credentials: true, // Allow cookies to be sent with requests
   })
 );
@@ -21,7 +21,7 @@ app.use(
 
 // 3. Define the port the server will run on
 // Use a fallback for environments where PORT isn't set
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 
 // Routes
 app.use("/api/app", appRoutes);

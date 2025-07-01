@@ -98,7 +98,7 @@ function App() {
     videoBlob: Blob,
     questionIndex: number
   ): Promise<Record<string, any>> => {
-    const apiUrl = "http://localhost:3000/api/app/generate-reviews";
+    const apiUrl = "http://162.192.181.84:4000/api/app/generate-reviews";
 
     // Create FormData to match your existing API format
     console.log(videoBlob);

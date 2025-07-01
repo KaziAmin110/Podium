@@ -1,7 +1,8 @@
 FROM node:20-slim
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
+RUN npm install -g nodemon
+RUN npm install --include=dev
 COPY . .
-EXPOSE 3000
+EXPOSE 4000
 CMD ["npm", "run", "dev"]
